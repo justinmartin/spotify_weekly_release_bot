@@ -2,7 +2,7 @@ import os
 import json
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
-import spotipy
+from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import smtplib
 from email.mime.text import MIMEText
@@ -26,7 +26,7 @@ auth_manager = SpotifyOAuth(
 )
 auth_manager.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
 
-sp = spotipy(auth_manager=auth_manager)
+sp = Spotify(auth_manager=auth_manager)
 
 
 # Vérifier la connexion
