@@ -33,6 +33,7 @@ jobs:
           echo "SPOTIPY_CLIENT_ID=${{ secrets.SPOTIPY_CLIENT_ID }}" >> .env
           echo "SPOTIPY_CLIENT_SECRET=${{ secrets.SPOTIPY_CLIENT_SECRET }}" >> .env
           echo "SPOTIPY_REDIRECT_URI=${{ secrets.SPOTIPY_REDIRECT_URI }}" >> .env
+          echo "SPOTIPY_REFRESH_TOKEN=${{ secrets.SPOTIPY_REFRESH_TOKEN }}" >> .env
 
       - name: Run Spotify Weekly Bot
         run: |
