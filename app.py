@@ -26,7 +26,7 @@ auth_manager = SpotifyOAuth(
 )
 auth_manager.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
 
-sp = Spotify(auth_manager=auth_manager)
+sp = spotipy(auth_manager=auth_manager)
 
 
 # Vérifier la connexion
