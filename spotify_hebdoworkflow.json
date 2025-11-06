@@ -83,16 +83,16 @@
     },
     {
       "parameters": {
-        "fromEmail": "ton.email@outlook.com",
-        "toEmail": "ton.email@outlook.com",
+        "fromEmail": "justin.martin@hec.edu",
+        "toEmail": "justin.martin@hec.edu",
         "subject": "={{$json.subject}}",
         "text": "={{$json.body}}",
         "smtp": {
           "host": "smtp.office365.com",
           "port": 587,
           "secure": false,
-          "user": "ton.email@outlook.com",
-          "password": "ton_mdp_app_outlook"
+          "user": "justin.martin@hec.edu",
+          "password": "1685@Aigoual"
         }
       },
       "name": "Email - Outlook",
