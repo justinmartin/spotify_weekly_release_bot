@@ -24,6 +24,8 @@ sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
     scope="playlist-modify-private playlist-modify-public",
     cache_path=".cache-spotify"
 ))
+auth_manager.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
+sp = Spotify(auth_manager=auth_manager)
 
 # Vérifier la connexion
 me = sp.current_user()
