@@ -44,7 +44,7 @@ last_week = today - timedelta(days=7)
 
 # ----- Chercher les nouvelles sorties -----
 new_tracks_set = set()
-releases_list = set ()
+releases_list = []
 errors_list = []
 
 for artist in ARTISTS:
@@ -63,9 +63,9 @@ for artist in ARTISTS:
                     new_tracks_set.add(track['uri'])
                     # Formatage texte pour le mail
                     if album['album_type'] == 'album':
-                        releases_list.add(f"{artist_name} - {album['name']} [Album]")
+                        releases_list.append(f"{artist_name} - {album['name']} [Album]")
                     else:
-                        releases_list.add(f"{artist_name} - {track['name']}")
+                        releases_list.append(f"{artist_name} - {track['name']}")
                         
     except Exception as e:
         errors_list.append(f"{artist_name}: {str(e)}")
@@ -96,6 +96,8 @@ def send_email(subject, body):
     print("✅ Email envoyé !")
 
 # ----- Envoi du rapport -----
+releases_list = set(releases_list)
+
 if SEND_EMAIL:
     week_number = today.isocalendar()[1]
 
