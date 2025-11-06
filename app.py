@@ -99,7 +99,7 @@ def send_email(subject, body):
 if SEND_EMAIL:
     week_number = today.isocalendar()[1]
 
-    report_body = "Voici les sorties Spotify de la semaine :\n\n"
+    report_body = "🎶 Voici les sorties Spotify de cette semaine :\n\n"
     for line in releases_list:
         report_body += f"{line}\n"
 
@@ -108,4 +108,4 @@ if SEND_EMAIL:
         for e in errors_list:
             report_body += f"{e}\n"
 
-    send_email(f"Sorties de la Semaine - WK{week_number}", report_body)
+    send_email(f" 🎶 Sorties de la Semaine - WK{week_number}", report_body)
