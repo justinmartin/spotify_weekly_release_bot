@@ -17,15 +17,17 @@ EMAIL_TO = os.getenv("EMAIL_TO")               # email destinataire
 SEND_EMAIL = True                              # True/False selon si on envoie l'email
 
 # Spotify OAuth
-sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+auth_manager = SpotifyOAuth(
     client_id=os.getenv("SPOTIPY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
     redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
     scope="playlist-modify-private playlist-modify-public",
     cache_path=".cache-spotify"
-))
+)
 auth_manager.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
+
 sp = Spotify(auth_manager=auth_manager)
+
 
 # Vérifier la connexion
 me = sp.current_user()
