@@ -66,6 +66,7 @@ for artist in ARTISTS:
                         releases_list.append(f"{artist_name} - {album['name']} [Album]")
                     else:
                         releases_list.append(f"{artist_name} - {track['name']}")
+                    releases_list = set(releases_list)
     except Exception as e:
         errors_list.append(f"{artist_name}: {str(e)}")
         print(f"⚠️ Erreur pour {artist_name}: {e}")
