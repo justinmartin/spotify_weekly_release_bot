@@ -81,16 +81,12 @@ for artist in ARTISTS:
 
 # ----- Chercher nouveaux épisodes de podcasts (shows) -----
 for show in PODCASTS:
-    show_name = show.get('show')
+    show_name = show.get('podcast')
+    show_id = show.get('id')
+    if not show_id:
+        print(f"⚠️ Pas d'ID pour le podcast '{show_name}'")
+        continue
     try:
-        # Rechercher le show par nom (peut retourner plusieurs; on prend le premier)
-        results = sp.search(q=f"show:{show_name}", type='show', limit=1)
-        items = results.get('shows', {}).get('items', [])
-        if not items:
-            print(f"ℹ️ Aucun show trouvé pour '{show_name}'")
-            continue
-        show_obj = items[0]
-        show_id = show_obj['id']
         episodes = sp.show_episodes(show_id, limit=50)
         for ep in episodes.get('items', []):
             release_date = ep.get('release_date')
