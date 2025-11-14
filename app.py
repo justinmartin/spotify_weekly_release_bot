@@ -88,6 +88,8 @@ for show in PODCASTS:
         continue
     try:
         episodes = sp.show_episodes(show_id, limit=50)
+        # Filtrer les épisodes de la semaine passée et trier par date (plus récent d'abord)
+        week_episodes = []
         for ep in episodes.get('items', []):
             release_date = ep.get('release_date')
             if not release_date:
@@ -97,11 +99,15 @@ for show in PODCASTS:
             else:
                 release_dt = datetime.strptime(release_date, "%Y")
             if release_dt >= last_week:
-                # Les épisodes de podcast ont des 'uri' utilisables
-                uri = ep.get('uri')
-                if uri:
-                    new_tracks_set.add(uri)
-                    podcast_releases.append(f"{show_name} - {ep.get('name')}")
+                week_episodes.append((release_dt, ep))
+        
+        # Prendre seulement le plus récent (limit 1 par podcast)
+        if week_episodes:
+            week_episodes.sort(key=lambda x: x[0], reverse=True)
+            release_dt, ep = week_episodes[0]
+            uri = ep.get('uri')
+            # Ne pas ajouter à la playlist, seulement au mail
+            podcast_releases.append(f"{show_name} - {ep.get('name')}")
     except Exception as e:
         errors_list.append(f"{show_name}: {str(e)}")
         print(f"⚠️ Erreur pour le show {show_name}: {e}")
