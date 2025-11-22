@@ -8,12 +8,12 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# Charger les variables d'environnement depuis .env à la racine ou .gitignore/.env en local
+# Charger les variables d'environnement depuis .env à la racine ou secrets/.env en local
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 env_path = os.path.join(BASE_DIR, '.env')
 if not os.path.exists(env_path):
-    # Fallback local : chercher .gitignore/.env
-    env_path = os.path.join(BASE_DIR, '.gitignore', '.env')
+    # Fallback local : chercher secrets/.env
+    env_path = os.path.join(BASE_DIR, 'secrets', '.env')
 load_dotenv(env_path)
 
 EMAIL_USER = os.getenv("EMAIL_USER")           # ton email Outlook
