@@ -1,0 +1,398 @@
+[
+  {
+    "album": "Illmatic",
+    "artist": "Nas",
+    "id": "3kEtdS2pH6hKcMU9Wioob1",
+    "year": 1994
+  },
+  {
+    "album": "Ready to Die",
+    "artist": "The Notorious B.I.G.",
+    "id": "2HTbQ0RHwukKVXAlTmCZP2",
+    "year": 1994
+  },
+  {
+    "album": "The Chronic",
+    "artist": "Dr. Dre",
+    "id": "2V5rhszUpCudPcb01zevOt",
+    "year": 1992
+  },
+  {
+    "album": "Enter the Wu-Tang (36 Chambers)",
+    "artist": "Wu-Tang Clan",
+    "id": "3tQd5mwBtVyxCoEo4htGAV",
+    "year": 1993
+  },
+  {
+    "album": "The Blueprint",
+    "artist": "Jay-Z",
+    "id": "2CUT0104gySOIvqwtXeFsX",
+    "year": 2001
+  },
+  {
+    "album": "Reasonable Doubt",
+    "artist": "Jay-Z",
+    "id": "3gHvsTdiiZWGxEg32lyLwk",
+    "year": 1996
+  },
+  {
+    "album": "Graduation",
+    "artist": "Kanye West",
+    "id": "4SZko61aMnmgvNhfhgTuD3",
+    "year": 2007
+  },
+  {
+    "album": "good kid, m.A.A.d city",
+    "artist": "Kendrick Lamar",
+    "id": "0Oq3mWfexhsjUh0aNNBB5u",
+    "year": 2012
+  },
+  {
+    "album": "To Pimp a Butterfly",
+    "artist": "Kendrick Lamar",
+    "id": "7ycBtnsMtyVbbwTfJwRjSP",
+    "year": 2015
+  },
+  {
+    "album": "My Beautiful Dark Twisted Fantasy",
+    "artist": "Kanye West",
+    "id": "20r762YmB5HeofjMCiPMLv",
+    "year": 2010
+  },
+  {
+    "album": "The Miseducation of Lauryn Hill",
+    "artist": "Lauryn Hill",
+    "id": "1BZoqf8Zje5nGdwZhOjAtD",
+    "year": 1998
+  },
+  {
+    "album": "Aquemini",
+    "artist": "OutKast",
+    "id": "5ceB3rxgXqIRpsOvVzTG28",
+    "year": 1998
+  },
+  {
+    "album": "ATLiens",
+    "artist": "OutKast",
+    "id": "1IaBCF26OjgYwUCEPaIyC0",
+    "year": 1996
+  },
+  {
+    "album": "Stankonia",
+    "artist": "OutKast",
+    "id": "2tm3Ht61kqqRZtIYsBjxEj",
+    "year": 2000
+  },
+  {
+    "album": "The Marshall Mathers LP",
+    "artist": "Eminem",
+    "id": "6t7956yu5zYf5A829XRiHC",
+    "year": 2000
+  },
+  {
+    "album": "Late Registration",
+    "artist": "Kanye West",
+    "id": "5ll74bqtkcXlKE7wwkMq4g",
+    "year": 2005
+  },
+  {
+    "album": "The Low End Theory",
+    "artist": "A Tribe Called Quest",
+    "id": "1p12OAWwudgMqfMzjMvl2a",
+    "year": 1991
+  },
+  {
+    "album": "Midnight Marauders",
+    "artist": "A Tribe Called Quest",
+    "id": "4v5x3Oo3UjQ9YmF3hRAip5",
+    "year": 1993
+  },
+  {
+    "album": "All Eyez on Me",
+    "artist": "2Pac",
+    "id": "78iX7tMceN0FsnmabAtlOC",
+    "year": 1996
+  },
+  {
+    "album": "Me Against the World",
+    "artist": "2Pac",
+    "id": "3OrucS4sHv6Bl9GS4rafEk",
+    "year": 1995
+  },
+  {
+    "album": "The Score",
+    "artist": "Fugees",
+    "id": "18XFe4CPBgVezXkxZP6rTb",
+    "year": 1996
+  },
+  {
+    "album": "Paid in Full",
+    "artist": "Eric B. & Rakim",
+    "id": "3miZDfDnP7SmOXAJXWdFmz",
+    "year": 1987
+  },
+  {
+    "album": "Doggystyle",
+    "artist": "Snoop Dogg",
+    "id": "5IFOummNcGXY3qCBWRchqP",
+    "year": 1993
+  },
+  {
+    "album": "The Eminem Show",
+    "artist": "Eminem",
+    "id": "2cWBwpqMsDJC1ZUwz813lo",
+    "year": 2002
+  },
+  {
+    "album": "Get Rich or Die Tryin",
+    "artist": "50 Cent",
+    "id": "5G5rgQHzdQnw32SI0WjIo5",
+    "year": 2003
+  },
+  {
+    "album": "The College Dropout",
+    "artist": "Kanye West",
+    "id": "4Uv86qWpGTxf7fU7lG5X6F",
+    "year": 2004
+  },
+  {
+    "album": "Tha Carter III",
+    "artist": "Lil Wayne",
+    "id": "1Do3y8IAcbYOToYQJnGwSO",
+    "year": 2008
+  },
+  {
+    "album": "Tha Carter II",
+    "artist": "Lil Wayne",
+    "id": "1Do3y8IAcbYOToYQJnGwSO",
+    "year": 2005
+  },
+  {
+    "album": "Channel Orange",
+    "artist": "Frank Ocean",
+    "id": "392p3shh2jkxUxY2VHvlH8",
+    "year": 2012
+  },
+  {
+    "album": "Blonde",
+    "artist": "Frank Ocean",
+    "id": "3mH6qwIy9crq0I9YQbOuDf",
+    "year": 2016
+  },
+  {
+    "album": "The Black Album",
+    "artist": "Jay-Z",
+    "id": "4FWvo9oS4gRgHtAwDwUjiO",
+    "year": 2003
+  },
+  {
+    "album": "Yeezus",
+    "artist": "Kanye West",
+    "id": "7D2NdGvBHIavgLhmcwhluK",
+    "year": 2013
+  },
+  {
+    "album": "Take Care",
+    "artist": "Drake",
+    "id": "6X1x82kppWZmDzlXXK3y3q",
+    "year": 2011
+  },
+  {
+    "album": "Nothing Was the Same",
+    "artist": "Drake",
+    "id": "2ZUFSbIkmFkGag000RWOpA",
+    "year": 2013
+  },
+  {
+    "album": "Mos Def & Talib Kweli Are Black Star",
+    "artist": "Black Star",
+    "id": "6GRzmk9UGL7odxprOPop1Q",
+    "year": 1998
+  },
+  {
+    "album": "The Infamous",
+    "artist": "Mobb Deep",
+    "id": "1cCAb1vN8uUsdfEylVmTLs",
+    "year": 1995
+  },
+  {
+    "album": "Liquid Swords",
+    "artist": "GZA",
+    "id": "3k8xoyOXkGgZxUKgpmxz4P",
+    "year": 1995
+  },
+  {
+    "album": "Only Built 4 Cuban Linx...",
+    "artist": "Raekwon",
+    "id": "7btiyhWzUfzxN3ijSiBpC8",
+    "year": 1995
+  },
+  {
+    "album": "Madvillainy",
+    "artist": "Madvillain",
+    "id": "19bQiwEKhXUBJWY6oV3KZk",
+    "year": 2004
+  },
+  {
+    "album": "Things Fall Apart",
+    "artist": "The Roots",
+    "id": "0qbl8aNaCUOvX8HGsZYLfh",
+    "year": 1999
+  },
+  {
+    "album": "Supreme Clientele",
+    "artist": "Ghostface Killah",
+    "id": "0SHlsKruygN9cOfAnaLxvM",
+    "year": 2000
+  },
+  {
+    "album": "Moment of Truth",
+    "artist": "Gang Starr",
+    "id": "5f6Nz2v1DESbpu1NerEql2",
+    "year": 1998
+  },
+  {
+    "album": "The Money Store",
+    "artist": "Death Grips",
+    "id": "1PQDjdBpHPikAodJqjzm6a",
+    "year": 2012
+  },
+  {
+    "album": "Flower Boy",
+    "artist": "Tyler, The Creator",
+    "id": "2nkto6YNI4rUYTLqEwWJ3o",
+    "year": 2017
+  },
+  {
+    "album": "IGOR",
+    "artist": "Tyler, The Creator",
+    "id": "5zi7WsKlIiUXv09tbGLKsE",
+    "year": 2019
+  },
+  {
+    "album": "Rodeo",
+    "artist": "Travis Scott",
+    "id": "4PWBTB6NYSKQwfo79I3prg",
+    "year": 2015
+  },
+  {
+    "album": "Astroworld",
+    "artist": "Travis Scott",
+    "id": "41GuZcammIkupMPKH2OJ6I",
+    "year": 2018
+  },
+  {
+    "album": "DS2",
+    "artist": "Future",
+    "id": "0fUy6IdLHDpGNwavIlhEsl",
+    "year": 2015
+  },
+  {
+    "album": "Culture",
+    "artist": "Migos",
+    "id": "7fd7SEK25VS3gJAUgSwL6y",
+    "year": 2017
+  },
+  {
+    "album": "Coloring Book",
+    "artist": "Chance the Rapper",
+    "id": "71QyofYesSsRMwFOTafnhB",
+    "year": 2016
+  },
+  {
+    "album": "DAMN.",
+    "artist": "Kendrick Lamar",
+    "id": "4eLPsYPBmXABThSJ821sqY",
+    "year": 2017
+  },
+  {
+    "album": "Speakerboxxx/The Love Below",
+    "artist": "OutKast",
+    "id": "1UsmQ3bpJTyK6ygoOOjG1r",
+    "year": 2003
+  },
+  {
+    "album": "2014 Forest Hills Drive",
+    "artist": "J. Cole",
+    "id": "0UMMIkurRUmkruZ3KGBLtG",
+    "year": 2014
+  },
+  {
+    "album": "4 Your Eyez Only",
+    "artist": "J. Cole",
+    "id": "3CCnGldVQ90c26aFATC1PW",
+    "year": 2016
+  },
+  {
+    "album": "Daytona",
+    "artist": "Pusha T",
+    "id": "07bIdDDe3I3hhWpxU6tuBp",
+    "year": 2018
+  },
+  {
+    "album": "Blackout!",
+    "artist": "Method Man",
+    "id": "5K9kD50P66neofCR8BoYxg",
+    "year": 1999
+  },
+  {
+    "album": "Death Certificate",
+    "artist": "Ice Cube",
+    "id": "062N80S3hs96dOhFzmvfLj",
+    "year": 1991
+  },
+  {
+    "album": "2001",
+    "artist": "Dr. Dre",
+    "id": "7q2B4M5EiBkqrlsNW8lB7N",
+    "year": 1999
+  },
+  {
+    "album": "Black on Both Sides",
+    "artist": "Mos Def",
+    "id": "5gK2l2LgWY0BA4p9uy27z6",
+    "year": 1999
+  },
+  {
+    "album": "The Life of Pablo",
+    "artist": "Kanye West",
+    "id": "7gsWAHLeT0w7es6FofOXk1",
+    "year": 2016
+  },
+  {
+    "album": "Donda",
+    "artist": "Kanye West",
+    "id": "5CnpZV3q5BcESefcB3WJmz",
+    "year": 2021
+  },
+  {
+    "album": "Certified Lover Boy",
+    "artist": "Drake",
+    "id": "3SpBlxme9WbeQdI9kx7KAV",
+    "year": 2021
+  },
+  {
+    "album": "Mr. Morale & The Big Steppers",
+    "artist": "Kendrick Lamar",
+    "id": "79ONNoS4M9tfIA1mYLBYVX",
+    "year": 2022
+  },
+  {
+    "album": "Call Me If You Get Lost",
+    "artist": "Tyler, The Creator",
+    "id": "45ba6QAtNrdv6Ke4MFOKk9",
+    "year": 2021
+  },
+  {
+    "album": "Whole Lotta Red",
+    "artist": "Playboi Carti",
+    "id": "2QRedhP5RmKJiJ1i8VgDGR",
+    "year": 2020
+  },
+  {
+    "album": "Die Lit",
+    "artist": "Playboi Carti",
+    "id": "7dAm8ShwJLFm9SaJ6Yc58O",
+    "year": 2018
+  }
+]

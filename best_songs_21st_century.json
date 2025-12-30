@@ -1,0 +1,476 @@
+[
+  {
+    "song": "Get Ur Freak On",
+    "artist": "Missy Elliott",
+    "id": "6zsk6uF3MxfIeHPlubKBvR",
+    "year": 2001
+  },
+  {
+    "song": "Crazy in Love",
+    "artist": "Beyonc\u00e9",
+    "id": "5IVuqXILoxVWvWEPm82Jxr",
+    "year": 2003
+  },
+  {
+    "song": "Hey Ya!",
+    "artist": "OutKast",
+    "id": "3AszgPDZd9q0DpDFt4HFBy",
+    "year": 2003
+  },
+  {
+    "song": "In Da Club",
+    "artist": "50 Cent",
+    "id": "6eObMhagGCRnpIHn1E8vO8",
+    "year": 2003
+  },
+  {
+    "song": "Since U Been Gone",
+    "artist": "Kelly Clarkson",
+    "id": "3iJTbZDSnZ676y5qObWDm0",
+    "year": 2004
+  },
+  {
+    "song": "Gold Digger",
+    "artist": "Kanye West",
+    "id": "1PS1QMdUqOal0ai3Gt7sDQ",
+    "year": 2005
+  },
+  {
+    "song": "Umbrella",
+    "artist": "Rihanna",
+    "id": "49FYlytm3dAAraYgpoJZux",
+    "year": 2007
+  },
+  {
+    "song": "Single Ladies (Put a Ring on It)",
+    "artist": "Beyonc\u00e9",
+    "id": "557un1HgwYMuqfWGSTmnxw",
+    "year": 2008
+  },
+  {
+    "song": "Poker Face",
+    "artist": "Lady Gaga",
+    "id": "1QV6tiMFM6fSOKOGLMHYYg",
+    "year": 2008
+  },
+  {
+    "song": "Empire State of Mind",
+    "artist": "Jay-Z",
+    "id": "2igwFfvr1OAGX9SKDCPBwO",
+    "year": 2009
+  },
+  {
+    "song": "Bad Romance",
+    "artist": "Lady Gaga",
+    "id": "6TAdq4dNZx3JN2vm6Pr4hi",
+    "year": 2009
+  },
+  {
+    "song": "Rolling in the Deep",
+    "artist": "Adele",
+    "id": "4OSBTYWVwsQhGLF9NHvIbR",
+    "year": 2010
+  },
+  {
+    "song": "Ni**as In Paris",
+    "artist": "JAY-Z & Kanye West",
+    "id": "1auxYwYrFRqZP7t3s7w4um",
+    "year": 2011
+  },
+  {
+    "song": "We Found Love",
+    "artist": "Rihanna",
+    "id": "0U10zFw4GlBacOy9VDGfGL",
+    "year": 2011
+  },
+  {
+    "song": "Somebody That I Used to Know",
+    "artist": "Gotye",
+    "id": "1qDrWA6lyx8cLECdZE7TV7",
+    "year": 2011
+  },
+  {
+    "song": "Thrift Shop",
+    "artist": "Macklemore",
+    "id": "6CjtS2JZH9RkDz5UVInsa9",
+    "year": 2012
+  },
+  {
+    "song": "Get Lucky",
+    "artist": "Daft Punk",
+    "id": "2Foc5Q5nqNiosCNqttzHof",
+    "year": 2013
+  },
+  {
+    "song": "Royals",
+    "artist": "Lorde",
+    "id": "4SDWMFvYJKtK1QPhIOeZhd",
+    "year": 2013
+  },
+  {
+    "song": "Happy",
+    "artist": "Pharrell Williams",
+    "id": "60nZcImufyMA1MKQY3dcCH",
+    "year": 2013
+  },
+  {
+    "song": "Uptown Funk",
+    "artist": "Mark Ronson",
+    "id": "32OlwWuMpZ6b0aN2RZOeMS",
+    "year": 2014
+  },
+  {
+    "song": "Blank Space",
+    "artist": "Taylor Swift",
+    "id": "1u8c2t2Cy7UBoG4ArRcF5g",
+    "year": 2014
+  },
+  {
+    "song": "Hotline Bling",
+    "artist": "Drake",
+    "id": "0wwPcA6wtMf6HUMpIRdeP7",
+    "year": 2015
+  },
+  {
+    "song": "Formation",
+    "artist": "Beyonc\u00e9",
+    "id": "6g0Orsxv6glTJCt4cHsRsQ",
+    "year": 2016
+  },
+  {
+    "song": "One Dance",
+    "artist": "Drake",
+    "id": "1zi7xx7UVEFkmKfv06H8x0",
+    "year": 2016
+  },
+  {
+    "song": "Closer",
+    "artist": "The Chainsmokers",
+    "id": "7crMiinWx373rNBZBaVske",
+    "year": 2016
+  },
+  {
+    "song": "HUMBLE.",
+    "artist": "Kendrick Lamar",
+    "id": "7KXjTSCq5nL1LoYtL7XAwS",
+    "year": 2017
+  },
+  {
+    "song": "Despacito",
+    "artist": "Luis Fonsi",
+    "id": "1vnnXMrBeEWiRg3YCMCjQq",
+    "year": 2017
+  },
+  {
+    "song": "God's Plan",
+    "artist": "Drake",
+    "id": "6DCZcSspjsKoFjzjrWoCdn",
+    "year": 2018
+  },
+  {
+    "song": "This Is America",
+    "artist": "Childish Gambino",
+    "id": "0b9oOr2ZgvyQu88wzixux9",
+    "year": 2018
+  },
+  {
+    "song": "thank u, next",
+    "artist": "Ariana Grande",
+    "id": "3e9HZxeyfWwjeyPAMmWSSQ",
+    "year": 2018
+  },
+  {
+    "song": "Old Town Road",
+    "artist": "Lil Nas X",
+    "id": "2YpeDb67231RjR0MgVLzsG",
+    "year": 2019
+  },
+  {
+    "song": "Blinding Lights",
+    "artist": "The Weeknd",
+    "id": "6qYkmqFsXbj8CQjAdbYz07",
+    "year": 2019
+  },
+  {
+    "song": "WAP",
+    "artist": "Cardi B",
+    "id": "0FpOBRl7y5tetQwtNLsgNg",
+    "year": 2020
+  },
+  {
+    "song": "Levitating",
+    "artist": "Dua Lipa",
+    "id": "5nujrmhLynf4yMoMtj8AQF",
+    "year": 2020
+  },
+  {
+    "song": "drivers license",
+    "artist": "Olivia Rodrigo",
+    "id": "5T6VunSjIt1FnyXzN1HXVr",
+    "year": 2021
+  },
+  {
+    "song": "good 4 u",
+    "artist": "Olivia Rodrigo",
+    "id": "6P4d1NWBCNIYZjzF9k1mVN",
+    "year": 2021
+  },
+  {
+    "song": "Stay",
+    "artist": "The Kid LAROI",
+    "id": "5HCyWlXZPP0y6Gqq8TgA20",
+    "year": 2021
+  },
+  {
+    "song": "Heat Waves",
+    "artist": "Glass Animals",
+    "id": "4TPrUBWVY8y0X5RCh4QDfJ",
+    "year": 2020
+  },
+  {
+    "song": "As It Was",
+    "artist": "Harry Styles",
+    "id": "4Dvkj6JhhA12EX05fT7y2e",
+    "year": 2022
+  },
+  {
+    "song": "Anti-Hero",
+    "artist": "Taylor Swift",
+    "id": "0V3wPSX9ygBnCm8psDIegu",
+    "year": 2022
+  },
+  {
+    "song": "Flowers",
+    "artist": "Miley Cyrus",
+    "id": "7DSAEUvxU8FajXtRloy8M0",
+    "year": 2023
+  },
+  {
+    "song": "Kill Bill",
+    "artist": "SZA",
+    "id": "1Qrg8KqiBpW07V7PNxwwwL",
+    "year": 2022
+  },
+  {
+    "song": "Yeah!",
+    "artist": "Usher",
+    "id": "5rb9QrpfcKFHM1EUbSIurX",
+    "year": 2004
+  },
+  {
+    "song": "Stan",
+    "artist": "Eminem",
+    "id": "0TR2EOv4irt7GAiLIZ3kZ8",
+    "year": 2000
+  },
+  {
+    "song": "Lose Yourself",
+    "artist": "Eminem",
+    "id": "1v7L65Lzy0j0vdpRjJewt1",
+    "year": 2002
+  },
+  {
+    "song": "99 Problems",
+    "artist": "Jay-Z",
+    "id": "7IdFdRlCjUi6kkhbPoRfnw",
+    "year": 2003
+  },
+  {
+    "song": "Jesus Walks",
+    "artist": "Kanye West",
+    "id": "5g1vtHqi9uV7xtYeCcFOBx",
+    "year": 2004
+  },
+  {
+    "song": "Stronger",
+    "artist": "Kanye West",
+    "id": "0j2T0R9dR9qdJYsB7ciXhf",
+    "year": 2007
+  },
+  {
+    "song": "Paper Planes",
+    "artist": "M.I.A.",
+    "id": "1ixbwbeBi5ufN4noUKmW5a",
+    "year": 2007
+  },
+  {
+    "song": "Run This Town",
+    "artist": "Jay-Z",
+    "id": "7LR85XLWw2yXqKBSI5brbG",
+    "year": 2009
+  },
+  {
+    "song": "Power",
+    "artist": "Kanye West",
+    "id": "2gZUPNdnz5Y45eiGxpHGSc",
+    "year": 2010
+  },
+  {
+    "song": "Swimming Pools (Drank)",
+    "artist": "Kendrick Lamar",
+    "id": "3VYzbU22BooAROigHHwycs",
+    "year": 2012
+  },
+  {
+    "song": "m.A.A.d city",
+    "artist": "Kendrick Lamar",
+    "id": "1Z2FvDFZSDQ23s4BDqpWqZ",
+    "year": 2012
+  },
+  {
+    "song": "Alright",
+    "artist": "Kendrick Lamar",
+    "id": "3iVcZ5G6tvkXZkZKlMpIUs",
+    "year": 2015
+  },
+  {
+    "song": "DNA.",
+    "artist": "Kendrick Lamar",
+    "id": "4odAJ4IxmYzy3co4TeYP24",
+    "year": 2017
+  },
+  {
+    "song": "SICKO MODE",
+    "artist": "Travis Scott",
+    "id": "2xLMifQCjDGFmkHkpNLD9h",
+    "year": 2018
+  },
+  {
+    "song": "Lucid Dreams",
+    "artist": "Juice WRLD",
+    "id": "79CzbTOcQbkkkjLCPyn19y",
+    "year": 2018
+  },
+  {
+    "song": "Sunflower",
+    "artist": "Post Malone",
+    "id": "3KkXRkHbMCARz0aVfEt68P",
+    "year": 2018
+  },
+  {
+    "song": "Truth Hurts",
+    "artist": "Lizzo",
+    "id": "07BhlNh2EfpueinIglsXYt",
+    "year": 2017
+  },
+  {
+    "song": "Juice",
+    "artist": "Lizzo",
+    "id": "20iaCA4F9lD31FMKQHHYJE",
+    "year": 2019
+  },
+  {
+    "song": "The Box",
+    "artist": "Roddy Ricch",
+    "id": "3P9bEWvIESZlqVj9DXKGR6",
+    "year": 2019
+  },
+  {
+    "song": "Rockstar",
+    "artist": "DaBaby",
+    "id": "5tm3mKOAcbLuJIfv0CHMzW",
+    "year": 2020
+  },
+  {
+    "song": "Life Is Good",
+    "artist": "Future",
+    "id": "1K5KBOgreBi5fkEHvg5ap3",
+    "year": 2020
+  },
+  {
+    "song": "Redbone",
+    "artist": "Childish Gambino",
+    "id": "3vQ4T78TTMOjQXGfXVKQJo",
+    "year": 2016
+  },
+  {
+    "song": "Thinkin Bout You",
+    "artist": "Frank Ocean",
+    "id": "7DfFc7a6Rwfi3YQMRbDMau",
+    "year": 2012
+  },
+  {
+    "song": "Pyramids",
+    "artist": "Frank Ocean",
+    "id": "4QhWbupniDd44EDtnh2bFJ",
+    "year": 2012
+  },
+  {
+    "song": "Nights",
+    "artist": "Frank Ocean",
+    "id": "7eqoqGkKwgOaWNNHx90uEZ",
+    "year": 2016
+  },
+  {
+    "song": "Nikes",
+    "artist": "Frank Ocean",
+    "id": "19YKaevk2bce4odJkP5L22",
+    "year": 2016
+  },
+  {
+    "song": "Goosebumps",
+    "artist": "Travis Scott",
+    "id": "6gBFPUFcJLzWGx4lenP6h2",
+    "year": 2016
+  },
+  {
+    "song": "STARGAZING",
+    "artist": "Travis Scott",
+    "id": "7wBJfHzpfI3032CSD7CE2m",
+    "year": 2018
+  },
+  {
+    "song": "XO Tour Llif3",
+    "artist": "Lil Uzi Vert",
+    "id": "01EcSJ2fKLXAhkfARB3O9N",
+    "year": 2017
+  },
+  {
+    "song": "Bad and Boujee",
+    "artist": "Migos",
+    "id": "0o3LHaHnmu6jTp7KA3RfQZ",
+    "year": 2016
+  },
+  {
+    "song": "Mask Off",
+    "artist": "Future",
+    "id": "6dVZCbi9CYtD9LjAHXRjIG",
+    "year": 2017
+  },
+  {
+    "song": "No Role Modelz",
+    "artist": "J. Cole",
+    "id": "68Dni7IE4VyPkTOH9mRWHr",
+    "year": 2014
+  },
+  {
+    "song": "Work",
+    "artist": "Rihanna",
+    "id": "72TFWvU3wUYdUuxejTTIzt",
+    "year": 2016
+  },
+  {
+    "song": "Shape of You",
+    "artist": "Ed Sheeran",
+    "id": "7qiZfU4dY1lWllzX7mPBI3",
+    "year": 2017
+  },
+  {
+    "song": "Bohemian Rhapsody",
+    "artist": "Queen",
+    "id": "2OBofMJx94NryV2SK8p8Zf",
+    "year": 1975
+  },
+  {
+    "song": "Mr. Brightside",
+    "artist": "The Killers",
+    "id": "37SOcZLRdgn4onbbvGAdmD",
+    "year": 2003
+  },
+  {
+    "song": "Seven Nation Army",
+    "artist": "The White Stripes",
+    "id": "3dPQuX8Gs42Y7b454ybpMR",
+    "year": 2003
+  }
+]

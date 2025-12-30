@@ -7,18 +7,22 @@ __pycache__/
 
 # Virtual environments
 venv/
+.venv/
 env/
 ENV/
 
 # Spotify cache
 .cache-spotify
+.cache
 
-# Environment variables - le dossier .gitignore/ contient le .env secret
-# (ne pas ignorer le dossier .gitignore/ lui-même)
+# macOS
+.DS_Store
+
+# Environment variables - le dossier secrets/ contient le .env secret
+secrets/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-secrets/

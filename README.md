@@ -70,3 +70,18 @@ Spotify ne permet pas la création de vrais dossiers via son API publique. Pour 
 
 Ce rapport est envoyé automatiquement par e-mail (Outlook / SMTP) avec pour objet : `Sorties de la semaine - WK__`.
 Le corps du mail contient le listing des titres détectés et la section `Èrreurs rencontrées`.
+
+---
+
+## 🎵 Configuration de l'API Genius (optionnel)
+
+Pour enrichir les albums classiques avec des infos contextuelles (bio artiste, date de sortie, anecdotes), obtenez un token Genius :
+
+1. Allez sur [genius.com/api-clients](https://genius.com/api-clients)
+2. Créez une application et générez un token d'accès
+3. Ajoutez-le dans votre fichier `.env` :
+   ```bash
+   GENIUS_ACCESS_TOKEN=votre_token_ici
+   ```
+4. Ajoutez-le aussi dans **GitHub Secrets** (`GENIUS_ACCESS_TOKEN`)
+
