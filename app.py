@@ -74,20 +74,32 @@ def get_album_genius_info(album_name, artist_name):
     Récupère les informations contextuelles d'un album depuis Genius.
     Retourne un dictionnaire avec description, producteurs, faits marquants, etc.
     """
+    import re
+    
+    def format_for_genius_url(text):
+        """Formate un texte pour une URL Genius (ex: 'The Blueprint' -> 'The-blueprint')"""
+        # Remplacer les caractères spéciaux
+        text = re.sub(r'[^\w\s-]', '', text)
+        # Remplacer les espaces par des tirets
+        text = re.sub(r'\s+', '-', text)
+        return text.capitalize()
+    
     try:
-        # Rechercher directement une chanson de l'album pour avoir l'URL Genius
+        # Construire l'URL de l'album directement (format Genius standard)
+        artist_formatted = format_for_genius_url(artist_name)
+        album_formatted = format_for_genius_url(album_name)
+        album_url = f"https://genius.com/albums/{artist_formatted}/{album_formatted}"
+        
+        # Rechercher une chanson de l'album pour avoir des informations contextuelles
         song = genius.search_song(album_name, artist_name)
         
         if not song:
             # Essayer avec juste le nom de l'artiste
             song = genius.search_song(artist_name, artist_name)
         
-        if not song:
-            return None
-        
         # Construire les informations
         info = {
-            'url': song.url if song else '',
+            'url': album_url,  # URL directe vers l'album sur Genius
             'description': '',
             'release_date': '',
             'facts': []
@@ -103,7 +115,7 @@ def get_album_genius_info(album_name, artist_name):
             pass
         
         # Extraire des faits marquants depuis les annotations de la chanson
-        if hasattr(song, 'description_annotation') and song.description_annotation:
+        if song and hasattr(song, 'description_annotation') and song.description_annotation:
             try:
                 desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
                 if desc and len(desc) > 50:
@@ -114,7 +126,6 @@ def get_album_genius_info(album_name, artist_name):
         return info
     except Exception as e:
         print(f"Erreur Genius pour {album_name} - {artist_name}: {e}")
-        return None
         return None
 
 
@@ -214,7 +225,8 @@ for show in PODCASTS:
             release_dt, ep = week_episodes[0]
             uri = ep.get('uri')
             # Ne pas ajouter à la playlist, seulement au mail
-            podcast_releases.append(f"{show_name} - {ep.get('name')}")
+            # Stocker comme tuple (show_name, episode_name) pour pouvoir formater séparément
+            podcast_releases.append((show_name, ep.get('name')))
     except Exception as e:
         errors_list.append(f"{show_name}: {str(e)}")
         print(f"⚠️ Erreur pour le show {show_name}: {e}")
@@ -365,15 +377,21 @@ if SEND_EMAIL:
             safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             html_body += f"<li>{safe_line}</li>"
         html_body += "</ul>"
+        
+        # Lien vers la playlist juste après les sorties musicales
+        if playlist_url:
+            text_body += f"\n🔗 Playlist de la semaine : {playlist_url}\n"
+            html_body += f"<p style=\"margin-top:15px; padding:12px; background-color:#1DB954; border-radius:8px; text-align:center;\"><a href=\"{playlist_url}\" target=\"_blank\" style=\"text-decoration:none; color:white; font-weight:bold; font-size:1em;\">🎧 Écouter la playlist de la semaine</a></p>"
 
     # Section Podcasts
     if podcast_releases:
         text_body += "\n-- Podcasts --\n"
         html_body += "<h4>🎧 Podcasts</h4><ul>"
-        for line in podcast_releases:
-            text_body += f"{line}\n"
-            safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            html_body += f"<li>{safe_line}</li>"
+        for show_name, episode_name in podcast_releases:
+            text_body += f"{show_name} - {episode_name}\n"
+            safe_show = show_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            safe_episode = episode_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            html_body += f"<li><strong>{safe_show}</strong> - {safe_episode}</li>"
         html_body += "</ul>"
 
     # Section Découvertes (Recommandations)
@@ -392,7 +410,7 @@ if SEND_EMAIL:
         text_body += "3 albums incontournables du classement Rolling Stone des 200 meilleurs albums hip-hop :\n\n"
         
         html_body += f"<h4>📀 Les Classiques Hip-Hop de la semaine</h4>"
-        html_body += "<p style=\"font-size:0.9em; color:#666;\">3 albums incontournables du classement Rolling Stone des 200 meilleurs albums hip-hop :</p>"
+        html_body += "<p style=\"font-size:0.9em; color:#666;\">3 Classiques du Hip-Hop à (ré)écouter (Rolling Stone) :</p>"
         
         for classic in classics_of_week:
             # Version texte
@@ -411,7 +429,7 @@ if SEND_EMAIL:
             # Version HTML enrichie
             html_body += f"<div style=\"margin-bottom:20px; padding:15px; background-color:#f8f8f8; border-left:4px solid #1DB954;\">"
             html_body += f"<strong style=\"font-size:1.1em;\">{classic['artist']}</strong> - <em>{classic['album']}</em> ({classic['year']})<br>"
-            html_body += f"<a href=\"{classic['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954; font-size:0.9em;\">🎵 Écouter sur Spotify</a>"
+            html_body += f"<a href=\"{classic['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954; font-size:0.9em;\">🎵 Spotify</a>"
             
             # Ajouter les infos Genius en HTML
             if classic.get('genius_info'):
@@ -429,7 +447,7 @@ if SEND_EMAIL:
                     html_body += f"</p>"
                 
                 if ginfo.get('url'):
-                    html_body += f"<p style=\"margin-top:5px;\"><a href=\"{ginfo['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#FFD700; font-weight:bold; font-size:0.85em;\">📖 En savoir plus sur Genius</a></p>"
+                    html_body += f"<p style=\"margin-top:5px;\"><a href=\"{ginfo['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#FFD700; font-weight:bold; font-size:0.85em;\">💡Genius</a></p>"
             
             html_body += f"</div>"
 
@@ -458,7 +476,7 @@ if SEND_EMAIL:
             # Version HTML enrichie
             html_body += f"<div style=\"margin-bottom:15px; padding:12px; background-color:#f8f8f8; border-left:4px solid #1DB954;\">"
             html_body += f"<strong style=\"font-size:1.05em;\">{song['artist']}</strong> - <em>{song['song']}</em> ({song['year']})<br>"
-            html_body += f"<a href=\"{song['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954; font-size:0.9em;\">🎵 Écouter sur Spotify</a>"
+            html_body += f"<a href=\"{song['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954; font-size:0.9em;\">🎵Spotify</a>"
             
             # Ajouter les infos Genius en HTML
             if song.get('genius_info'):
@@ -470,7 +488,7 @@ if SEND_EMAIL:
                     html_body += f"</p>"
                 
                 if ginfo.get('url'):
-                    html_body += f"<p style=\"margin-top:5px;\"><a href=\"{ginfo['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#FFD700; font-weight:bold; font-size:0.85em;\">📖 En savoir plus sur Genius</a></p>"
+                    html_body += f"<p style=\"margin-top:5px;\"><a href=\"{ginfo['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#FFD700; font-weight:bold; font-size:0.85em;\">💡Genius</a></p>"
             
             html_body += f"</div>"
 
@@ -482,11 +500,6 @@ if SEND_EMAIL:
             safe_e = e.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
             html_body += f"<li>{safe_e}</li>"
         html_body += "</ul>"
-
-    # Inclure le lien vers la playlist créée (si applicable)
-    if playlist_url:
-        text_body += f"\nPlaylist créée : {playlist_url}\n"
-        html_body += f"<p>🔗 Playlist créée : <a href=\"{playlist_url}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954;\">Ouvrir la playlist</a></p>"
 
     html_body += "</body></html>"
 
