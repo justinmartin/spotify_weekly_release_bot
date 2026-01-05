@@ -35,8 +35,13 @@ auth_manager.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
 
 sp = Spotify(auth_manager=auth_manager)
 
-# Genius API
-genius = Genius(os.getenv("GENIUS_ACCESS_TOKEN"), verbose=False, remove_section_headers=True)
+# Genius API - Gérer le cas où le token n'est pas défini
+genius_token = os.getenv("GENIUS_ACCESS_TOKEN")
+if genius_token:
+    genius = Genius(genius_token, verbose=False, remove_section_headers=True)
+else:
+    print("⚠️ GENIUS_ACCESS_TOKEN non défini - fonctionnalités Genius désactivées")
+    genius = None
 
 
 # Vérifier la connexion
@@ -74,6 +79,9 @@ def get_album_genius_info(album_name, artist_name):
     Récupère les informations contextuelles d'un album depuis Genius.
     Retourne un dictionnaire avec description, producteurs, faits marquants, etc.
     """
+    if not genius:
+        return None
+    
     import re
     
     def format_for_genius_url(text):
@@ -135,6 +143,9 @@ def get_song_genius_info(song_name, artist_name):
     Récupère les informations contextuelles d'une chanson depuis Genius.
     Retourne un dictionnaire avec description, annotations, et URL Genius.
     """
+    if not genius:
+        return None
+    
     try:
         # Rechercher la chanson sur Genius
         song = genius.search_song(song_name, artist_name)
