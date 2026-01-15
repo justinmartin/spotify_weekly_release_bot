@@ -38,7 +38,7 @@ sp = Spotify(auth_manager=auth_manager)
 # Genius API - Gérer le cas où le token n'est pas défini
 genius_token = os.getenv("GENIUS_ACCESS_TOKEN")
 if genius_token:
-    genius = Genius(genius_token, verbose=False, remove_section_headers=True)
+    genius = Genius(genius_token, verbose=False, remove_section_headers=True, timeout=15)
 else:
     print("⚠️ GENIUS_ACCESS_TOKEN non défini - fonctionnalités Genius désactivées")
     genius = None
@@ -90,7 +90,7 @@ def get_album_genius_info(album_name, artist_name):
         text = re.sub(r'[^\w\s-]', '', text)
         # Remplacer les espaces par des tirets
         text = re.sub(r'\s+', '-', text)
-        return text.capitalize()
+        return text.lower()  # Utiliser lower() au lieu de capitalize()
     
     try:
         # Construire l'URL de l'album directement (format Genius standard)
@@ -98,14 +98,7 @@ def get_album_genius_info(album_name, artist_name):
         album_formatted = format_for_genius_url(album_name)
         album_url = f"https://genius.com/albums/{artist_formatted}/{album_formatted}"
         
-        # Rechercher une chanson de l'album pour avoir des informations contextuelles
-        song = genius.search_song(album_name, artist_name)
-        
-        if not song:
-            # Essayer avec juste le nom de l'artiste
-            song = genius.search_song(artist_name, artist_name)
-        
-        # Construire les informations
+        # Construire les informations de base
         info = {
             'url': album_url,  # URL directe vers l'album sur Genius
             'description': '',
@@ -113,27 +106,37 @@ def get_album_genius_info(album_name, artist_name):
             'facts': []
         }
         
-        # Récupérer la description de l'artiste
+        # Rechercher une chanson de l'album pour avoir des informations contextuelles
+        try:
+            song = genius.search_song(album_name, artist_name)
+            
+            if not song:
+                # Essayer avec juste le nom de l'artiste
+                song = genius.search_song(artist_name, artist_name)
+            
+            # Extraire des faits marquants depuis les annotations de la chanson
+            if song and hasattr(song, 'description_annotation') and song.description_annotation:
+                try:
+                    desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
+                    if desc and len(desc) > 50:
+                        info['facts'].append(desc[:300] + "..." if len(desc) > 300 else desc)
+                except Exception as e:
+                    print(f"  ⚠️ Erreur annotation Genius pour {album_name}: {e}")
+        except Exception as e:
+            print(f"  ⚠️ Erreur recherche chanson Genius pour {album_name}: {e}")
+        
+        # Récupérer la description de l'artiste (séparé pour éviter de bloquer tout)
         try:
             artist = genius.search_artist(artist_name, max_songs=0, get_full_info=True)
             if artist and artist.description:
                 desc = artist.description.get('plain', '') if isinstance(artist.description, dict) else str(artist.description)
                 info['description'] = desc.split('\n')[0] if desc else ''
-        except:
-            pass
-        
-        # Extraire des faits marquants depuis les annotations de la chanson
-        if song and hasattr(song, 'description_annotation') and song.description_annotation:
-            try:
-                desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
-                if desc and len(desc) > 50:
-                    info['facts'].append(desc[:300] + "..." if len(desc) > 300 else desc)
-            except:
-                pass
+        except Exception as e:
+            print(f"  ⚠️ Erreur recherche artiste Genius pour {artist_name}: {e}")
         
         return info
     except Exception as e:
-        print(f"Erreur Genius pour {album_name} - {artist_name}: {e}")
+        print(f"  ⚠️ Erreur Genius générale pour {album_name} - {artist_name}: {e}")
         return None
 
 
@@ -150,6 +153,7 @@ def get_song_genius_info(song_name, artist_name):
         # Rechercher la chanson sur Genius
         song = genius.search_song(song_name, artist_name)
         if not song:
+            print(f"  ℹ️ Chanson '{song_name}' de {artist_name} non trouvée sur Genius")
             return None
         
         # Construire les informations
@@ -160,16 +164,19 @@ def get_song_genius_info(song_name, artist_name):
         
         # Extraire des faits marquants depuis les annotations
         facts = []
-        if hasattr(song, 'description_annotation') and song.description_annotation:
-            desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
-            if desc and len(desc) > 50:
-                facts.append(desc[:200] + "..." if len(desc) > 200 else desc)
+        try:
+            if hasattr(song, 'description_annotation') and song.description_annotation:
+                desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
+                if desc and len(desc) > 50:
+                    facts.append(desc[:200] + "..." if len(desc) > 200 else desc)
+        except Exception as e:
+            print(f"  ⚠️ Erreur extraction annotations pour {song_name}: {e}")
         
         info['facts'] = facts
         
         return info
     except Exception as e:
-        print(f"Erreur Genius pour {song_name} - {artist_name}: {e}")
+        print(f"  ⚠️ Erreur Genius pour {song_name} - {artist_name}: {e}")
         return None
 
 
@@ -261,14 +268,12 @@ if new_tracks_set and len(new_tracks_set) > 0:
 # ----- Sélectionner 3 albums classiques hip-hop et 3 chansons aléatoires -----
 classics_of_week = []
 songs_of_week = []
-classics_tracks = []  # URIs des tracks des albums classiques pour la playlist
 songs_uris = []  # URIs des chansons du siècle pour la playlist
 
-# Utiliser la semaine de l'année comme seed pour avoir les mêmes sélections toute la semaine
+# Utiliser la semaine de l'année pour le nom de la playlist
 week_number = today.isocalendar()[1]
-random.seed(week_number)
 
-# Sélectionner 3 albums classiques aléatoires
+# Sélectionner 3 albums classiques aléatoires (vraiment aléatoire, pas de seed fixe)
 if CLASSICS_HIPHOP and len(CLASSICS_HIPHOP) >= 3:
     selected_classics = random.sample(CLASSICS_HIPHOP, 3)
     for classic in selected_classics:
@@ -285,9 +290,7 @@ if CLASSICS_HIPHOP and len(CLASSICS_HIPHOP) >= 3:
                 'url': album_info['external_urls']['spotify'],
                 'genius_info': genius_info  # Ajout des infos Genius
             })
-            # Ajouter toutes les tracks de l'album à la playlist
-            for track in album_info['tracks']['items']:
-                classics_tracks.append(track['uri'])
+            # Ne plus ajouter les albums classiques à la playlist (seulement dans l'email)
         except Exception as e:
             print(f"⚠️ Erreur lors de la récupération du classique {classic['album']}: {e}")
 
@@ -322,10 +325,6 @@ if new_tracks_set:
     # Ajouter les nouvelles sorties
     sp.playlist_add_items(playlist_id=playlist['id'], items=list(new_tracks_set))
     
-    # Ajouter les tracks des 3 albums classiques
-    if classics_tracks:
-        sp.playlist_add_items(playlist_id=playlist['id'], items=classics_tracks)
-    
     # Ajouter les 3 chansons du siècle
     if songs_uris:
         sp.playlist_add_items(playlist_id=playlist['id'], items=songs_uris)
@@ -337,10 +336,9 @@ if new_tracks_set:
         # fallback vers l'URL construite depuis l'ID
         playlist_url = f"https://open.spotify.com/playlist/{playlist['id']}"
 
-    total_tracks = len(new_tracks_set) + len(classics_tracks) + len(songs_uris)
+    total_tracks = len(new_tracks_set) + len(songs_uris)
     print(f"✅ Playlist '{playlist_name}' créée avec {total_tracks} titres ! ({playlist_url})")
     print(f"   - Nouvelles sorties: {len(new_tracks_set)}")
-    print(f"   - Albums classiques: {len(classics_tracks)} tracks")
     print(f"   - Sons du siècle: {len(songs_uris)}")
 else:
     print("ℹ️ Pas de nouvelles sorties cette semaine.")
