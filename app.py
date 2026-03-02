@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import unicodedata
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from spotipy import Spotify
@@ -86,11 +87,15 @@ def get_album_genius_info(album_name, artist_name):
     
     def format_for_genius_url(text):
         """Formate un texte pour une URL Genius (ex: 'The Blueprint' -> 'The-blueprint')"""
-        # Remplacer les caractères spéciaux
+        # Supprimer les accents / caractères combinés
+        text = unicodedata.normalize('NFKD', text)
+        text = ''.join(c for c in text if not unicodedata.combining(c))
+        # Remplacer les caractères spéciaux (garder alphanumérique, espaces, tirets)
         text = re.sub(r'[^\w\s-]', '', text)
         # Remplacer les espaces par des tirets
-        text = re.sub(r'\s+', '-', text)
-        return text.lower()  # Utiliser lower() au lieu de capitalize()
+        text = re.sub(r'\s+', '-', text.strip())
+        # Première lettre en majuscule, reste en minuscule (format Genius : "The-blueprint")
+        return (text[0].upper() + text[1:].lower()) if text else text
     
     try:
         # Construire l'URL de l'album directement (format Genius standard)
@@ -203,12 +208,13 @@ for artist in ARTISTS:
             else:
                 release_dt = datetime.strptime(release_date, "%Y")
             if release_dt >= last_week:
-                for track in sp.album_tracks(album['id'])['items']:
-                    new_tracks_set.add(track['uri'])
-                    # Formatage texte pour le mail
-                    if album['album_type'] == 'album':
-                        music_releases.append(f"{artist_name} - {album['name']} [Album]")
-                    else:
+                if album['album_type'] == 'album':
+                    # Album complet : signaler dans l'email mais ne pas ajouter à la playlist
+                    music_releases.append(f"{artist_name} - {album['name']} [Album]")
+                else:
+                    # Single/EP : ajouter à la playlist
+                    for track in sp.album_tracks(album['id'])['items']:
+                        new_tracks_set.add(track['uri'])
                         music_releases.append(f"{artist_name} - {track['name']}")
                         
     except Exception as e:
