@@ -85,3 +85,5 @@ Pour enrichir les albums classiques avec des infos contextuelles (bio artiste, d
    ```
 4. Ajoutez-le aussi dans **GitHub Secrets** (`GENIUS_ACCESS_TOKEN`)
 
+<!-- chore: trigger automation run -->
+
