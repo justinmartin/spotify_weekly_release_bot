@@ -38,3 +38,14 @@ jobs:
       - name: Run Spotify Weekly Bot
         run: |
           python app.py
+
+  # Empêche GitHub de désactiver ce workflow après 60 jours sans commit
+  keepalive:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Keep workflow enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/spotify-weekly.yml/enable"
