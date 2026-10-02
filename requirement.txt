@@ -1,3 +1,0 @@
-spotipy
-python-dotenv
-lyricsgenius

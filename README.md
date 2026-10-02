@@ -87,3 +87,38 @@ Pour enrichir les albums classiques avec des infos contextuelles (bio artiste, d
 
 <!-- chore: trigger automation run -->
 
+
+---
+
+## Utilisation
+
+```bash
+pip install -r requirements.txt
+python app.py --dry-run   # aperçu sans créer de playlist ni envoyer de mail (out/email_<date>.html)
+python app.py             # run complet
+```
+
+Depuis GitHub : **Actions → Spotify Weekly Release Bot → Run workflow** (case « Dry run » disponible).
+
+### Options
+
+| Variable | Effet |
+|---|---|
+| `ROLLING_PLAYLIST=true` (variable de repo GitHub) | Une seule playlist `HEBDO` vidée et remplie chaque semaine, au lieu d'une nouvelle `HEBDO - JJ/MM` |
+| `GENIUS_ACCESS_TOKEN` (secret) | Active l'enrichissement Genius des classiques et sons du siècle |
+
+### Filtrage
+
+- Les **rééditions** (remaster, anniversary, expanded…) sont ignorées.
+- Les **éditions deluxe** sont signalées dans le mail mais pas ajoutées à la playlist.
+- Un morceau en collab entre deux artistes suivis n'apparaît qu'une fois.
+
+### Renouveler le token Spotify
+
+En cas d'échec, le bot envoie un mail d'alerte. Si le refresh token a expiré :
+
+```bash
+python generate_refresh_token.py
+```
+
+Connecte-toi dans le navigateur, puis colle le token affiché dans le secret GitHub `SPOTIPY_REFRESH_TOKEN`.

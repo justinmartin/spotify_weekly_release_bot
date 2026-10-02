@@ -26,3 +26,6 @@ secrets/
 .idea/
 *.swp
 *.swo
+
+# Aperçus --dry-run
+out/

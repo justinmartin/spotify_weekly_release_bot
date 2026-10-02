@@ -1,521 +1,450 @@
-import os
+"""
+Spotify Weekly Release Bot : nouvelles sorties de la semaine -> playlist + mail récap.
+
+    python app.py              # run normal (playlist + mail)
+    python app.py --dry-run    # aucune écriture : ni playlist ni mail, aperçu dans out/
+
+Variables d'environnement (.env, secrets/.env ou secrets GitHub) :
+    SPOTIPY_CLIENT_ID, SPOTIPY_CLIENT_SECRET, SPOTIPY_REDIRECT_URI, SPOTIPY_REFRESH_TOKEN
+    EMAIL_USER, EMAIL_PASSWORD, EMAIL_TO
+    GENIUS_ACCESS_TOKEN   (optionnel)
+    ROLLING_PLAYLIST      (optionnel, "true" : une seule playlist "HEBDO" vidée et remplie
+                           chaque semaine au lieu d'une nouvelle "HEBDO - JJ/MM")
+"""
+import argparse
 import json
+import os
 import random
+import re
+import smtplib
+import sys
+import traceback
 import unicodedata
-from datetime import datetime, timedelta
+from datetime import date, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from html import escape
+
 from dotenv import load_dotenv
 from spotipy import Spotify
+from spotipy.cache_handler import MemoryCacheHandler
+from spotipy.exceptions import SpotifyOauthError
 from spotipy.oauth2 import SpotifyOAuth
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from lyricsgenius import Genius
 
-# Charger les variables d'environnement depuis .env à la racine ou secrets/.env en local
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-env_path = os.path.join(BASE_DIR, '.env')
-if not os.path.exists(env_path):
-    # Fallback local : chercher secrets/.env
-    env_path = os.path.join(BASE_DIR, 'secrets', '.env')
-load_dotenv(env_path)
+load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, "secrets", ".env"))
 
-EMAIL_USER = os.getenv("EMAIL_USER")           # ton email Outlook
-EMAIL_PASSWORD = os.getenv("EMAIL_PASSWORD")   # mot de passe App
-EMAIL_TO = os.getenv("EMAIL_TO")               # email destinataire
-SEND_EMAIL = True                              # True/False selon si on envoie l'email
+SPOTIFY_SCOPE = "playlist-modify-private playlist-modify-public"
+ROLLING_PLAYLIST_NAME = "HEBDO"
 
-# Spotify OAuth
-auth_manager = SpotifyOAuth(
-    client_id=os.getenv("SPOTIPY_CLIENT_ID"),
-    client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
-    redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
-    scope="playlist-modify-private playlist-modify-public",
-    cache_path=".cache-spotify"
-)
-auth_manager.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
-
-sp = Spotify(auth_manager=auth_manager)
-
-# Genius API - Gérer le cas où le token n'est pas défini
-genius_token = os.getenv("GENIUS_ACCESS_TOKEN")
-if genius_token:
-    genius = Genius(genius_token, verbose=False, remove_section_headers=True, timeout=15)
-else:
-    print("⚠️ GENIUS_ACCESS_TOKEN non défini - fonctionnalités Genius désactivées")
-    genius = None
+# Rééditions à ignorer complètement (pas de nouveau son)
+REISSUE_RE = re.compile(r"\b(remaster(ed)?|anniversary|expanded|re-?issue|reedition|réédition)\b", re.I)
+# Éditions augmentées : signalées dans le mail mais pas ajoutées à la playlist
+DELUXE_RE = re.compile(r"\b(deluxe|edition|édition|complete|extended)\b", re.I)
 
 
-# Vérifier la connexion
-me = sp.current_user()
-print(f"✅ Connecté à Spotify en tant que : {me['display_name']}")
-
-with open(os.path.join(BASE_DIR, "artists.json"), "r") as f:
-    ARTISTS = json.load(f)
-
-# Charger les podcasts (optionnel)
-PODCASTS = []
-podcasts_path = os.path.join(BASE_DIR, "podcasts.json")
-if os.path.exists(podcasts_path):
-    with open(podcasts_path, "r") as pf:
-        PODCASTS = json.load(pf)
-
-# Charger les classiques hip-hop (200 albums Rolling Stone)
-CLASSICS_HIPHOP = []
-classics_hiphop_path = os.path.join(BASE_DIR, "classics_hiphop.json")
-if os.path.exists(classics_hiphop_path):
-    with open(classics_hiphop_path, "r") as cf:
-        CLASSICS_HIPHOP = json.load(cf)
-
-# Charger les meilleurs sons du 21e siècle (Rolling Stone)
-BEST_SONGS = []
-best_songs_path = os.path.join(BASE_DIR, "best_songs_21st_century.json")
-if os.path.exists(best_songs_path):
-    with open(best_songs_path, "r") as bs:
-        BEST_SONGS = json.load(bs)
+def load_json(name, default=None):
+    path = os.path.join(BASE_DIR, name)
+    if not os.path.exists(path):
+        return default if default is not None else []
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-# ----- Fonction pour récupérer les infos Genius sur un album -----
-def get_album_genius_info(album_name, artist_name):
-    """
-    Récupère les informations contextuelles d'un album depuis Genius.
-    Retourne un dictionnaire avec description, producteurs, faits marquants, etc.
-    """
-    if not genius:
-        return None
-    
-    import re
-    
-    def format_for_genius_url(text):
-        """Formate un texte pour une URL Genius (ex: 'The Blueprint' -> 'The-blueprint')"""
-        # Supprimer les accents / caractères combinés
-        text = unicodedata.normalize('NFKD', text)
-        text = ''.join(c for c in text if not unicodedata.combining(c))
-        # Remplacer les caractères spéciaux (garder alphanumérique, espaces, tirets)
-        text = re.sub(r'[^\w\s-]', '', text)
-        # Remplacer les espaces par des tirets
-        text = re.sub(r'\s+', '-', text.strip())
-        # Première lettre en majuscule, reste en minuscule (format Genius : "The-blueprint")
-        return (text[0].upper() + text[1:].lower()) if text else text
-    
+def parse_release_date(value):
+    """Spotify renvoie 'YYYY-MM-DD', 'YYYY-MM' ou 'YYYY'."""
+    parts = [int(p) for p in value.split("-")]
+    return date(parts[0], parts[1] if len(parts) > 1 else 1, parts[2] if len(parts) > 2 else 1)
+
+
+# ----------------------------------------------------------------- Spotify
+
+class SpotifyTokenExpired(Exception):
+    pass
+
+
+def connect_spotify():
+    auth = SpotifyOAuth(
+        client_id=os.getenv("SPOTIPY_CLIENT_ID"),
+        client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
+        redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
+        scope=SPOTIFY_SCOPE,
+        cache_handler=MemoryCacheHandler(),
+        open_browser=False,
+    )
     try:
-        # Construire l'URL de l'album directement (format Genius standard)
-        artist_formatted = format_for_genius_url(artist_name)
-        album_formatted = format_for_genius_url(album_name)
-        album_url = f"https://genius.com/albums/{artist_formatted}/{album_formatted}"
-        
-        # Construire les informations de base
-        info = {
-            'url': album_url,  # URL directe vers l'album sur Genius
-            'description': '',
-            'release_date': '',
-            'facts': []
-        }
-        
-        # Rechercher une chanson de l'album pour avoir des informations contextuelles
+        auth.refresh_access_token(os.getenv("SPOTIPY_REFRESH_TOKEN"))
+    except SpotifyOauthError as e:
+        if "invalid_grant" in str(e):
+            raise SpotifyTokenExpired(str(e)) from e
+        raise
+    sp = Spotify(auth_manager=auth)
+    print(f"✅ Connecté à Spotify en tant que : {sp.current_user()['display_name']}")
+    return sp
+
+
+def fetch_artist_releases(sp, artists, since):
+    """Sorties des artistes suivis depuis `since`.
+    Retourne (lignes pour le mail, URIs pour la playlist, erreurs)."""
+    lines, uris, errors = [], [], []
+    seen_albums, seen_tracks = set(), set()
+
+    for artist in artists:
+        name = artist["artist"]
         try:
-            song = genius.search_song(album_name, artist_name)
-            
-            if not song:
-                # Essayer avec juste le nom de l'artiste
-                song = genius.search_song(artist_name, artist_name)
-            
-            # Extraire des faits marquants depuis les annotations de la chanson
-            if song and hasattr(song, 'description_annotation') and song.description_annotation:
-                try:
-                    desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
-                    if desc and len(desc) > 50:
-                        info['facts'].append(desc[:300] + "..." if len(desc) > 300 else desc)
-                except Exception as e:
-                    print(f"  ⚠️ Erreur annotation Genius pour {album_name}: {e}")
+            albums = sp.artist_albums(artist["id"], include_groups="album,single", limit=50)["items"]
         except Exception as e:
-            print(f"  ⚠️ Erreur recherche chanson Genius pour {album_name}: {e}")
-        
-        # Récupérer la description de l'artiste (séparé pour éviter de bloquer tout)
-        try:
-            artist = genius.search_artist(artist_name, max_songs=0, get_full_info=True)
-            if artist and artist.description:
-                desc = artist.description.get('plain', '') if isinstance(artist.description, dict) else str(artist.description)
-                info['description'] = desc.split('\n')[0] if desc else ''
-        except Exception as e:
-            print(f"  ⚠️ Erreur recherche artiste Genius pour {artist_name}: {e}")
-        
-        return info
-    except Exception as e:
-        print(f"  ⚠️ Erreur Genius générale pour {album_name} - {artist_name}: {e}")
-        return None
+            errors.append(f"{name}: {e}")
+            print(f"⚠️ Erreur pour {name}: {e}")
+            continue
 
-
-# ----- Fonction pour récupérer les infos Genius sur une chanson -----
-def get_song_genius_info(song_name, artist_name):
-    """
-    Récupère les informations contextuelles d'une chanson depuis Genius.
-    Retourne un dictionnaire avec description, annotations, et URL Genius.
-    """
-    if not genius:
-        return None
-    
-    try:
-        # Rechercher la chanson sur Genius
-        song = genius.search_song(song_name, artist_name)
-        if not song:
-            print(f"  ℹ️ Chanson '{song_name}' de {artist_name} non trouvée sur Genius")
-            return None
-        
-        # Construire les informations
-        info = {
-            'url': song.url,
-            'release_date': song.release_date if hasattr(song, 'release_date') else '',
-        }
-        
-        # Extraire des faits marquants depuis les annotations
-        facts = []
-        try:
-            if hasattr(song, 'description_annotation') and song.description_annotation:
-                desc = song.description_annotation.get('annotations', [{}])[0].get('body', {}).get('plain', '')
-                if desc and len(desc) > 50:
-                    facts.append(desc[:200] + "..." if len(desc) > 200 else desc)
-        except Exception as e:
-            print(f"  ⚠️ Erreur extraction annotations pour {song_name}: {e}")
-        
-        info['facts'] = facts
-        
-        return info
-    except Exception as e:
-        print(f"  ⚠️ Erreur Genius pour {song_name} - {artist_name}: {e}")
-        return None
-
-
-# ----- Déterminer la semaine passée -----
-today = datetime.today()
-last_week = today - timedelta(days=7)
-
-# ----- Chercher les nouvelles sorties -----
-new_tracks_set = set()
-music_releases = []
-podcast_releases = []
-errors_list = []
-playlist_url = None
-
-for artist in ARTISTS:
-    artist_name = artist['artist']
-    artist_id = artist['id']
-    try:
-        albums = sp.artist_albums(artist_id, album_type='album,single', limit=50)
-        for album in albums['items']:
-            release_date = album['release_date']
-            if len(release_date) == 10:
-                release_dt = datetime.strptime(release_date, "%Y-%m-%d")
-            else:
-                release_dt = datetime.strptime(release_date, "%Y")
-            if release_dt >= last_week:
-                if album['album_type'] == 'album':
-                    # Album complet : signaler dans l'email mais ne pas ajouter à la playlist
-                    music_releases.append(f"{artist_name} - {album['name']} [Album]")
-                else:
-                    # Single/EP : ajouter à la playlist
-                    for track in sp.album_tracks(album['id'])['items']:
-                        new_tracks_set.add(track['uri'])
-                        music_releases.append(f"{artist_name} - {track['name']}")
-                        
-    except Exception as e:
-        errors_list.append(f"{artist_name}: {str(e)}")
-        print(f"⚠️ Erreur pour {artist_name}: {e}")
-
-# ----- Chercher nouveaux épisodes de podcasts (shows) -----
-for show in PODCASTS:
-    show_name = show.get('podcast')
-    show_id = show.get('id')
-    if not show_id:
-        print(f"⚠️ Pas d'ID pour le podcast '{show_name}'")
-        continue
-    try:
-        episodes = sp.show_episodes(show_id, limit=50)
-        # Filtrer les épisodes de la semaine passée et trier par date (plus récent d'abord)
-        week_episodes = []
-        for ep in episodes.get('items', []):
-            release_date = ep.get('release_date')
-            if not release_date:
+        for album in albums:
+            if album["id"] in seen_albums or parse_release_date(album["release_date"]) < since:
                 continue
-            if len(release_date) == 10:
-                release_dt = datetime.strptime(release_date, "%Y-%m-%d")
-            else:
-                release_dt = datetime.strptime(release_date, "%Y")
-            if release_dt >= last_week:
-                week_episodes.append((release_dt, ep))
-        
-        # Prendre seulement le plus récent (limit 1 par podcast)
-        if week_episodes:
-            week_episodes.sort(key=lambda x: x[0], reverse=True)
-            release_dt, ep = week_episodes[0]
-            uri = ep.get('uri')
-            # Ne pas ajouter à la playlist, seulement au mail
-            # Stocker comme tuple (show_name, episode_name) pour pouvoir formater séparément
-            podcast_releases.append((show_name, ep.get('name')))
-    except Exception as e:
-        errors_list.append(f"{show_name}: {str(e)}")
-        print(f"⚠️ Erreur pour le show {show_name}: {e}")
+            seen_albums.add(album["id"])  # collab entre deux artistes suivis -> une seule fois
+            title = album["name"]
 
-# ----- Obtenir des recommandations basées sur les nouvelles sorties -----
-recommendations = []
-if new_tracks_set and len(new_tracks_set) > 0:
+            if REISSUE_RE.search(title):
+                print(f"   ↩️ Réédition ignorée : {name} - {title}")
+                continue
+            if album["album_type"] == "album" or DELUXE_RE.search(title):
+                tag = "Deluxe" if DELUXE_RE.search(title) else "Album"
+                lines.append(f"{name} - {title} [{tag}]")
+                continue
+
+            for track in sp.album_tracks(album["id"])["items"]:
+                key = (track["name"].lower(), tuple(sorted(a["id"] for a in track["artists"])))
+                if key in seen_tracks:
+                    continue
+                seen_tracks.add(key)
+                uris.append(track["uri"])
+                featured = [a["name"] for a in track["artists"] if a["name"] != name]
+                feat = f" ft. {', '.join(featured)}" if featured else ""
+                lines.append(f"{name}{feat} - {track['name']}")
+
+    return lines, uris, errors
+
+
+def fetch_podcast_episodes(sp, podcasts, since):
+    """Dernier épisode de la semaine pour chaque podcast suivi."""
+    episodes, errors = [], []
+    for show in podcasts:
+        name, show_id = show.get("podcast"), show.get("id")
+        if not show_id:
+            print(f"⚠️ Pas d'ID pour le podcast '{name}'")
+            continue
+        try:
+            items = sp.show_episodes(show_id, limit=50).get("items", [])
+        except Exception as e:
+            errors.append(f"{name}: {e}")
+            continue
+        recent = [ep for ep in items if ep and ep.get("release_date")
+                  and parse_release_date(ep["release_date"]) >= since]
+        if recent:
+            latest = max(recent, key=lambda ep: ep["release_date"])
+            episodes.append((name, latest["name"]))
+    return episodes, errors
+
+
+def fetch_recommendations(sp, track_uris):
+    """API dépréciée par Spotify pour les apps récentes : best effort, silencieux si 404."""
+    if not track_uris:
+        return []
     try:
-        # Prendre jusqu'à 5 tracks comme seeds pour les recommandations
-        seed_tracks = list(new_tracks_set)[:min(5, len(new_tracks_set))]
-        # Extraire juste l'ID depuis l'URI (format: spotify:track:ID)
-        seed_track_ids = [uri.split(':')[-1] for uri in seed_tracks]
-        
-        recs = sp.recommendations(seed_tracks=seed_track_ids, limit=3)
-        for track in recs['tracks']:
-            artist_names = ', '.join([artist['name'] for artist in track['artists']])
-            recommendations.append(f"{artist_names} - {track['name']}")
+        seeds = [uri.split(":")[-1] for uri in track_uris[:5]]
+        tracks = sp.recommendations(seed_tracks=seeds, limit=3)["tracks"]
+        return [f"{', '.join(a['name'] for a in t['artists'])} - {t['name']}" for t in tracks]
     except Exception as e:
-        print(f"⚠️ Erreur lors de la récupération des recommandations: {e}")
+        print(f"ℹ️ Recommandations indisponibles : {e}")
+        return []
 
-# ----- Sélectionner 3 albums classiques hip-hop et 3 chansons aléatoires -----
-classics_of_week = []
-songs_of_week = []
-songs_uris = []  # URIs des chansons du siècle pour la playlist
 
-# Utiliser la semaine de l'année pour le nom de la playlist
-week_number = today.isocalendar()[1]
-
-# Sélectionner 3 albums classiques aléatoires (vraiment aléatoire, pas de seed fixe)
-if CLASSICS_HIPHOP and len(CLASSICS_HIPHOP) >= 3:
-    selected_classics = random.sample(CLASSICS_HIPHOP, 3)
-    for classic in selected_classics:
+def pick_classics(sp, genius, classics, n=3):
+    picks = []
+    for c in random.sample(classics, min(n, len(classics))):
         try:
-            album_info = sp.album(classic['id'])
-            
-            # Récupérer les infos Genius pour contexte enrichi
-            genius_info = get_album_genius_info(classic['album'], classic['artist'])
-            
-            classics_of_week.append({
-                'album': classic['album'],
-                'artist': classic['artist'],
-                'year': classic['year'],
-                'url': album_info['external_urls']['spotify'],
-                'genius_info': genius_info  # Ajout des infos Genius
-            })
-            # Ne plus ajouter les albums classiques à la playlist (seulement dans l'email)
+            url = sp.album(c["id"])["external_urls"]["spotify"]
         except Exception as e:
-            print(f"⚠️ Erreur lors de la récupération du classique {classic['album']}: {e}")
+            print(f"⚠️ Classique {c['album']} : {e}")
+            continue
+        picks.append({**c, "url": url, "genius_info": get_album_genius_info(genius, c["album"], c["artist"])})
+    return picks
 
-# Sélectionner 3 chansons aléatoires du 21e siècle
-if BEST_SONGS and len(BEST_SONGS) >= 3:
-    selected_songs = random.sample(BEST_SONGS, 3)
-    for song in selected_songs:
+
+def pick_songs(sp, genius, songs, n=3):
+    picks = []
+    for s in random.sample(songs, min(n, len(songs))):
         try:
-            track_info = sp.track(song['id'])
-            
-            # Récupérer les infos Genius pour contexte enrichi
-            genius_info = get_song_genius_info(song['song'], song['artist'])
-            
-            songs_of_week.append({
-                'song': song['song'],
-                'artist': song['artist'],
-                'year': song['year'],
-                'url': track_info['external_urls']['spotify'],
-                'genius_info': genius_info  # Ajout des infos Genius
-            })
-            # Ajouter l'URI de la chanson pour la playlist
-            songs_uris.append(track_info['uri'])
+            track = sp.track(s["id"])
         except Exception as e:
-            print(f"⚠️ Erreur lors de la récupération du son {song['song']}: {e}")
+            print(f"⚠️ Son {s['song']} : {e}")
+            continue
+        picks.append({**s, "url": track["external_urls"]["spotify"], "uri": track["uri"],
+                      "genius_info": get_song_genius_info(genius, s["song"], s["artist"])})
+    return picks
 
-# ----- Créer playlist si nouvelles sorties -----
-if new_tracks_set:
-    playlist_name = f"HEBDO - {today.strftime('%d/%m')}"
-    user_id = sp.me()['id']
-    playlist = sp.user_playlist_create(user=user_id, name=playlist_name, public=False)
-    
-    # Ajouter les nouvelles sorties
-    sp.playlist_add_items(playlist_id=playlist['id'], items=list(new_tracks_set))
-    
-    # Ajouter les 3 chansons du siècle
-    if songs_uris:
-        sp.playlist_add_items(playlist_id=playlist['id'], items=songs_uris)
-    
-    # Récupérer l'URL publique Spotify de la playlist pour l'inclure dans l'email
-    if playlist.get('external_urls') and playlist['external_urls'].get('spotify'):
-        playlist_url = playlist['external_urls']['spotify']
+
+def publish_playlist(sp, uris, today, rolling):
+    """Crée la playlist de la semaine (ou remplit la playlist tournante). Retourne son URL."""
+    user_id = sp.me()["id"]
+    if rolling:
+        playlist = next((p for p in iter_user_playlists(sp) if p["name"] == ROLLING_PLAYLIST_NAME), None)
+        if playlist is None:
+            playlist = sp.user_playlist_create(user=user_id, name=ROLLING_PLAYLIST_NAME, public=False)
+        sp.playlist_replace_items(playlist["id"], uris[:100])
+        rest = uris[100:]
     else:
-        # fallback vers l'URL construite depuis l'ID
-        playlist_url = f"https://open.spotify.com/playlist/{playlist['id']}"
+        name = f"HEBDO - {today.strftime('%d/%m')}"
+        playlist = sp.user_playlist_create(user=user_id, name=name, public=False)
+        rest = uris
+    for i in range(0, len(rest), 100):  # l'API accepte 100 items max par appel
+        sp.playlist_add_items(playlist["id"], rest[i:i + 100])
+    url = playlist.get("external_urls", {}).get("spotify") or f"https://open.spotify.com/playlist/{playlist['id']}"
+    print(f"✅ Playlist '{playlist['name']}' : {len(uris)} titres ({url})")
+    return url
 
-    total_tracks = len(new_tracks_set) + len(songs_uris)
-    print(f"✅ Playlist '{playlist_name}' créée avec {total_tracks} titres ! ({playlist_url})")
-    print(f"   - Nouvelles sorties: {len(new_tracks_set)}")
-    print(f"   - Sons du siècle: {len(songs_uris)}")
-else:
-    print("ℹ️ Pas de nouvelles sorties cette semaine.")
 
-# ----- Fonction d'envoi d'email -----
-def send_email(subject, text_body, html_body=None):
-    msg = MIMEMultipart('alternative')
-    msg['From'] = EMAIL_USER
-    msg['To'] = EMAIL_TO
-    msg['Subject'] = subject
+def iter_user_playlists(sp):
+    page = sp.current_user_playlists(limit=50)
+    while page:
+        yield from page["items"]
+        page = sp.next(page) if page.get("next") else None
 
-    # Partie texte (fallback)
-    part1 = MIMEText(text_body, 'plain')
-    msg.attach(part1)
 
-    # Partie HTML (optionnelle)
-    if html_body:
-        part2 = MIMEText(html_body, 'html')
-        msg.attach(part2)
+# ------------------------------------------------------------------ Genius
 
-    with smtplib.SMTP('smtp.gmail.com', 587) as server:
-        server.starttls()
-        server.login(EMAIL_USER, EMAIL_PASSWORD)
-        server.send_message(msg)
-    print("✅ Email envoyé !")
+def connect_genius():
+    token = os.getenv("GENIUS_ACCESS_TOKEN")
+    if not token:
+        print("⚠️ GENIUS_ACCESS_TOKEN non défini - fonctionnalités Genius désactivées")
+        return None
+    from lyricsgenius import Genius
+    return Genius(token, verbose=False, remove_section_headers=True, timeout=15)
 
-# ----- Envoi du rapport -----
-# Dédupliquer les listes
-music_releases = list(dict.fromkeys(music_releases))
-podcast_releases = list(dict.fromkeys(podcast_releases))
 
-if SEND_EMAIL:
-    week_number = today.isocalendar()[1]
+def genius_url_slug(text):
+    """'The Blueprint' -> 'The-blueprint' (format des URLs d'albums Genius)."""
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    text = re.sub(r"[^\w\s-]", "", text)
+    text = re.sub(r"\s+", "-", text.strip())
+    return (text[0].upper() + text[1:].lower()) if text else text
 
-    # Construire corps texte et HTML avec deux sections : Musique et Podcasts
-    text_body = "🎶 Voici les sorties Spotify de cette semaine :\n\n"
-    html_body = "<html><body><h3> 🍝 Au menu cette semaine</h3>"
 
-    # Section Musique
-    if music_releases:
-        text_body += "-- Musique --\n"
-        html_body += "<h4>🎶 Musique</h4><ul>"
-        for line in music_releases:
-            text_body += f"{line}\n"
-            safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            html_body += f"<li>{safe_line}</li>"
-        html_body += "</ul>"
-        
-        # Lien vers la playlist juste après les sorties musicales
+def first_annotation(song, max_len):
+    try:
+        desc = song.description_annotation["annotations"][0]["body"]["plain"]
+    except (AttributeError, KeyError, IndexError, TypeError):
+        return []
+    if not desc or len(desc) <= 50:
+        return []
+    return [desc[:max_len] + "..." if len(desc) > max_len else desc]
+
+
+def get_album_genius_info(genius, album_name, artist_name):
+    if not genius:
+        return None
+    info = {
+        "url": f"https://genius.com/albums/{genius_url_slug(artist_name)}/{genius_url_slug(album_name)}",
+        "description": "",
+        "release_date": "",
+        "facts": [],
+    }
+    try:
+        song = genius.search_song(album_name, artist_name) or genius.search_song(artist_name, artist_name)
+        if song:
+            info["facts"] = first_annotation(song, 300)
+    except Exception as e:
+        print(f"  ⚠️ Genius (chanson) pour {album_name}: {e}")
+    try:
+        artist = genius.search_artist(artist_name, max_songs=0, get_full_info=True)
+        if artist and artist.description:
+            desc = artist.description.get("plain", "") if isinstance(artist.description, dict) else str(artist.description)
+            info["description"] = desc.split("\n")[0]
+    except Exception as e:
+        print(f"  ⚠️ Genius (artiste) pour {artist_name}: {e}")
+    return info
+
+
+def get_song_genius_info(genius, song_name, artist_name):
+    if not genius:
+        return None
+    try:
+        song = genius.search_song(song_name, artist_name)
+    except Exception as e:
+        print(f"  ⚠️ Genius pour {song_name} - {artist_name}: {e}")
+        return None
+    if not song:
+        return None
+    return {"url": song.url, "release_date": getattr(song, "release_date", ""), "facts": first_annotation(song, 200)}
+
+
+# -------------------------------------------------------------------- Mail
+
+GREEN, GOLD = "#1DB954", "#FFD700"
+
+
+def html_list(title, items, intro=None):
+    out = f"<h4>{title}</h4>"
+    if intro:
+        out += f'<p style="font-size:0.9em; color:#666;">{intro}</p>'
+    return out + "<ul>" + "".join(f"<li>{item}</li>" for item in items) + "</ul>"
+
+
+def html_card(head, url, genius_info, about=False):
+    out = (f'<div style="margin-bottom:18px; padding:14px; background-color:#f8f8f8; border-left:4px solid {GREEN};">'
+           f'{head}<br><a href="{url}" target="_blank" style="text-decoration:none; color:{GREEN}; font-size:0.9em;">🎵 Spotify</a>')
+    g = genius_info or {}
+    if about and g.get("description"):
+        out += (f'<p style="margin-top:10px; font-size:0.9em; color:#555;"><strong>À propos de l\'artiste :</strong>'
+                f'<br>{escape(g["description"][:250])}...</p>')
+    if g.get("facts"):
+        out += (f'<p style="margin-top:10px; padding:10px; background-color:#fff; border-left:3px solid {GOLD}; '
+                f'font-size:0.9em; color:#333;"><strong>💡 Le saviez-vous ?</strong><br>{escape(g["facts"][0])}</p>')
+    if g.get("url"):
+        out += (f'<p style="margin-top:5px;"><a href="{g["url"]}" target="_blank" style="text-decoration:none; '
+                f'color:{GOLD}; font-weight:bold; font-size:0.85em;">💡Genius</a></p>')
+    return out + "</div>"
+
+
+def build_email(today, releases, playlist_url, podcasts, recommendations, classics, songs, errors):
+    week = today.isocalendar()[1]
+    text = ["🎶 Voici les sorties Spotify de cette semaine :", ""]
+    html = ["<html><body><h3>🍝 Au menu cette semaine</h3>"]
+
+    if releases:
+        text += ["-- Musique --", *releases]
+        html.append(html_list("🎶 Musique", [escape(r) for r in releases]))
         if playlist_url:
-            text_body += f"\n🔗 Playlist de la semaine : {playlist_url}\n"
-            html_body += f"<p style=\"margin-top:15px; padding:12px; background-color:#1DB954; border-radius:8px; text-align:center;\"><a href=\"{playlist_url}\" target=\"_blank\" style=\"text-decoration:none; color:white; font-weight:bold; font-size:1em;\">🎧 Écouter la playlist de la semaine</a></p>"
+            text += ["", f"🔗 Playlist de la semaine : {playlist_url}"]
+            html.append(f'<p style="margin-top:15px; padding:12px; background-color:{GREEN}; border-radius:8px; text-align:center;">'
+                        f'<a href="{playlist_url}" target="_blank" style="text-decoration:none; color:white; font-weight:bold;">'
+                        "🎧 Écouter la playlist de la semaine</a></p>")
+    else:
+        text.append("Pas de nouvelle sortie cette semaine.")
+        html.append("<p>Pas de nouvelle sortie cette semaine.</p>")
 
-    # Section Podcasts
-    if podcast_releases:
-        text_body += "\n-- Podcasts --\n"
-        html_body += "<h4>🎧 Podcasts</h4><ul>"
-        for show_name, episode_name in podcast_releases:
-            text_body += f"{show_name} - {episode_name}\n"
-            safe_show = show_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            safe_episode = episode_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            html_body += f"<li><strong>{safe_show}</strong> - {safe_episode}</li>"
-        html_body += "</ul>"
+    if podcasts:
+        text += ["", "-- Podcasts --", *(f"{s} - {e}" for s, e in podcasts)]
+        html.append(html_list("🎧 Podcasts", [f"<strong>{escape(s)}</strong> - {escape(e)}" for s, e in podcasts]))
 
-    # Section Découvertes (Recommandations)
     if recommendations:
-        text_body += "\n-- Découvertes --\n"
-        html_body += "<h4>🔍 Découvertes</h4><p style=\"font-size:0.9em; color:#666;\">3 morceaux que tu pourrais aimer basés sur tes nouvelles sorties :</p><ul>"
-        for line in recommendations:
-            text_body += f"{line}\n"
-            safe_line = line.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            html_body += f"<li>{safe_line}</li>"
-        html_body += "</ul>"
+        text += ["", "-- Découvertes --", *recommendations]
+        html.append(html_list("🔍 Découvertes", [escape(r) for r in recommendations],
+                              "3 morceaux que tu pourrais aimer basés sur tes nouvelles sorties :"))
 
-    # Section Classiques hip-hop de la semaine
-    if classics_of_week:
-        text_body += f"\n-- Les Classiques Hip-Hop de la semaine --\n"
-        text_body += "3 albums incontournables du classement Rolling Stone des 200 meilleurs albums hip-hop :\n\n"
-        
-        html_body += f"<h4>📀 Les Classiques Hip-Hop de la semaine</h4>"
-        html_body += "<p style=\"font-size:0.9em; color:#666;\">3 Classiques du Hip-Hop à (ré)écouter (Rolling Stone) :</p>"
-        
-        for classic in classics_of_week:
-            # Version texte
-            text_body += f"• {classic['artist']} - {classic['album']} ({classic['year']})\n"
-            text_body += f"  {classic['url']}\n"
-            
-            # Ajouter infos Genius si disponibles
-            if classic.get('genius_info'):
-                ginfo = classic['genius_info']
-                if ginfo.get('description'):
-                    text_body += f"  À propos : {ginfo['description'][:200]}...\n"
-                if ginfo.get('facts'):
-                    text_body += f"  💡 Le saviez-vous ? {ginfo['facts'][0][:200]}...\n"
-            text_body += "\n"
-            
-            # Version HTML enrichie
-            html_body += f"<div style=\"margin-bottom:20px; padding:15px; background-color:#f8f8f8; border-left:4px solid #1DB954;\">"
-            html_body += f"<strong style=\"font-size:1.1em;\">{classic['artist']}</strong> - <em>{classic['album']}</em> ({classic['year']})<br>"
-            html_body += f"<a href=\"{classic['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954; font-size:0.9em;\">🎵 Spotify</a>"
-            
-            # Ajouter les infos Genius en HTML
-            if classic.get('genius_info'):
-                ginfo = classic['genius_info']
-                
-                if ginfo.get('description'):
-                    html_body += f"<p style=\"margin-top:10px; font-size:0.9em; color:#555;\"><strong>À propos de l'artiste :</strong><br>{ginfo['description'][:250]}...</p>"
-                
-                if ginfo.get('release_date'):
-                    html_body += f"<p style=\"margin-top:5px; font-size:0.85em; color:#777;\">📅 Sorti le : {ginfo['release_date']}</p>"
-                
-                if ginfo.get('facts') and len(ginfo['facts']) > 0:
-                    html_body += f"<p style=\"margin-top:10px; padding:10px; background-color:#fff; border-left:3px solid #FFD700; font-size:0.9em; color:#333;\">"
-                    html_body += f"<strong>💡 Le saviez-vous ?</strong><br>{ginfo['facts'][0][:300]}..."
-                    html_body += f"</p>"
-                
-                if ginfo.get('url'):
-                    html_body += f"<p style=\"margin-top:5px;\"><a href=\"{ginfo['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#FFD700; font-weight:bold; font-size:0.85em;\">💡Genius</a></p>"
-            
-            html_body += f"</div>"
+    if classics:
+        text += ["", "-- Les Classiques Hip-Hop de la semaine --"]
+        html.append('<h4>📀 Les Classiques Hip-Hop de la semaine</h4>'
+                    '<p style="font-size:0.9em; color:#666;">3 Classiques du Hip-Hop à (ré)écouter (Rolling Stone) :</p>')
+        for c in classics:
+            text += [f"• {c['artist']} - {c['album']} ({c['year']})", f"  {c['url']}"]
+            head = f"<strong>{escape(c['artist'])}</strong> - <em>{escape(c['album'])}</em> ({c['year']})"
+            html.append(html_card(head, c["url"], c["genius_info"], about=True))
+
+    if songs:
+        text += ["", "-- Les Sons du Siècle --"]
+        html.append('<h4>🎵 Les Sons du Siècle</h4>'
+                    '<p style="font-size:0.9em; color:#666;">3 morceaux parmi les meilleurs du 21e siècle (Rolling Stone) :</p>')
+        for s in songs:
+            text += [f"• {s['artist']} - {s['song']} ({s['year']})", f"  {s['url']}"]
+            head = f"<strong>{escape(s['artist'])}</strong> - <em>{escape(s['song'])}</em> ({s['year']})"
+            html.append(html_card(head, s["url"], s["genius_info"]))
+
+    if errors:
+        text += ["", "Erreurs rencontrées :", *errors]
+        html.append("<h3>Erreurs rencontrées :</h3><ul>" + "".join(f"<li>{escape(e)}</li>" for e in errors) + "</ul>")
+
+    html.append("</body></html>")
+    return f"🎶 Sorties de la Semaine - WK{week}", "\n".join(text), "".join(html)
 
 
-    # Section Meilleurs sons du 21e siècle
-    if songs_of_week:
-        text_body += f"\n-- Les Sons du Siècle --\n"
-        text_body += "3 morceaux parmi les meilleurs du 21e siècle (Rolling Stone) :\n\n"
-        
-        html_body += f"<h4>🎵 Les Sons du Siècle</h4>"
-        html_body += "<p style=\"font-size:0.9em; color:#666;\">3 morceaux parmi les meilleurs du 21e siècle (Rolling Stone) :</p>"
-        
-        for song in songs_of_week:
-            text_body += f"• {song['artist']} - {song['song']} ({song['year']})\n"
-            text_body += f"  {song['url']}\n"
-            
-            # Ajouter infos Genius en texte
-            if song.get('genius_info'):
-                ginfo = song['genius_info']
-                if ginfo.get('facts'):
-                    text_body += f"  💡 {ginfo['facts'][0][:150]}...\n"
-                if ginfo.get('url'):
-                    text_body += f"  📖 Genius: {ginfo['url']}\n"
-            text_body += "\n"
-            
-            # Version HTML enrichie
-            html_body += f"<div style=\"margin-bottom:15px; padding:12px; background-color:#f8f8f8; border-left:4px solid #1DB954;\">"
-            html_body += f"<strong style=\"font-size:1.05em;\">{song['artist']}</strong> - <em>{song['song']}</em> ({song['year']})<br>"
-            html_body += f"<a href=\"{song['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#1DB954; font-size:0.9em;\">🎵Spotify</a>"
-            
-            # Ajouter les infos Genius en HTML
-            if song.get('genius_info'):
-                ginfo = song['genius_info']
-                
-                if ginfo.get('facts') and len(ginfo['facts']) > 0:
-                    html_body += f"<p style=\"margin-top:10px; padding:8px; background-color:#fff; border-left:3px solid #FFD700; font-size:0.85em; color:#333;\">"
-                    html_body += f"<strong>💡 Le saviez-vous ?</strong><br>{ginfo['facts'][0][:200]}..."
-                    html_body += f"</p>"
-                
-                if ginfo.get('url'):
-                    html_body += f"<p style=\"margin-top:5px;\"><a href=\"{ginfo['url']}\" target=\"_blank\" style=\"text-decoration:none; color:#FFD700; font-weight:bold; font-size:0.85em;\">💡Genius</a></p>"
-            
-            html_body += f"</div>"
+def send_email(subject, text_body, html_body=None):
+    msg = MIMEMultipart("alternative")
+    msg["From"] = os.getenv("EMAIL_USER")
+    msg["To"] = os.getenv("EMAIL_TO")
+    msg["Subject"] = subject
+    msg.attach(MIMEText(text_body, "plain"))
+    if html_body:
+        msg.attach(MIMEText(html_body, "html"))
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASSWORD"))
+        server.send_message(msg)
+    print(f"✅ Email envoyé : {subject}")
 
-    if errors_list:
-        text_body += "\nErreurs rencontrées :\n"
-        html_body += "<h3>Erreurs rencontrées :</h3><ul>"
-        for e in errors_list:
-            text_body += f"{e}\n"
-            safe_e = e.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            html_body += f"<li>{safe_e}</li>"
-        html_body += "</ul>"
 
-    html_body += "</body></html>"
+def send_failure_alert(exc):
+    """Prévenir par mail plutôt que de découvrir la panne des semaines plus tard."""
+    if isinstance(exc, SpotifyTokenExpired):
+        subject = "⚠️ Spotify bot : refresh token expiré"
+        body = ("Le refresh token Spotify a expiré, le bot ne peut plus tourner.\n\n"
+                "Pour le renouveler, en local dans le repo :\n"
+                "    python generate_refresh_token.py\n"
+                "puis colle le token affiché dans le secret GitHub SPOTIPY_REFRESH_TOKEN :\n"
+                "https://github.com/justinmartin/spotify_weekly_release_bot/settings/secrets/actions\n")
+    else:
+        subject = "❌ Spotify bot : échec du run hebdo"
+        body = "Le run hebdomadaire a échoué :\n\n" + "".join(traceback.format_exception(exc))
+    try:
+        send_email(subject, body)
+    except Exception as mail_err:
+        print(f"⚠️ Impossible d'envoyer l'alerte : {mail_err}")
 
-    send_email(f" 🎶 Sorties de la Semaine - WK{week_number}", text_body, html_body)
+
+# -------------------------------------------------------------------- Main
+
+def run(dry_run=False):
+    today = date.today()
+    since = today - timedelta(days=6)  # vendredi -> les 7 derniers jours, aujourd'hui inclus
+    rolling = os.getenv("ROLLING_PLAYLIST", "").lower() in {"1", "true", "yes"}
+
+    sp = connect_spotify()
+    genius = connect_genius()
+
+    releases, release_uris, errors = fetch_artist_releases(sp, load_json("artists.json"), since)
+    podcasts, podcast_errors = fetch_podcast_episodes(sp, load_json("podcasts.json"), since)
+    errors += podcast_errors
+    recommendations = fetch_recommendations(sp, release_uris)
+    classics = pick_classics(sp, genius, load_json("classics_hiphop.json"))
+    songs = pick_songs(sp, genius, load_json("best_songs_21st_century.json"))
+
+    playlist_url = None
+    if release_uris:
+        uris = release_uris + [s["uri"] for s in songs]
+        if dry_run:
+            print(f"⏭️ Dry run : playlist non créée ({len(uris)} titres)")
+        else:
+            playlist_url = publish_playlist(sp, uris, today, rolling)
+    else:
+        print("ℹ️ Pas de nouvelles sorties cette semaine.")
+
+    subject, text_body, html_body = build_email(
+        today, releases, playlist_url, podcasts, recommendations, classics, songs, errors)
+
+    if dry_run:
+        os.makedirs(os.path.join(BASE_DIR, "out"), exist_ok=True)
+        preview = os.path.join(BASE_DIR, "out", f"email_{today}.html")
+        with open(preview, "w", encoding="utf-8") as f:
+            f.write(html_body)
+        print(f"⏭️ Dry run : mail non envoyé, aperçu dans {preview}\n\n{subject}\n{text_body}")
+    else:
+        send_email(subject, text_body, html_body)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[1])
+    parser.add_argument("--dry-run", action="store_true", help="ni playlist ni mail, aperçu dans out/")
+    args = parser.parse_args()
+    try:
+        run(dry_run=args.dry_run)
+    except Exception as e:
+        traceback.print_exc()
+        if not args.dry_run:
+            send_failure_alert(e)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
