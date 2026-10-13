@@ -107,11 +107,20 @@ Depuis GitHub : **Actions → Spotify Weekly Release Bot → Run workflow** (cas
 | `ROLLING_PLAYLIST=true` (variable de repo GitHub) | Une seule playlist `HEBDO` vidée et remplie chaque semaine, au lieu d'une nouvelle `HEBDO - JJ/MM` |
 | `GENIUS_ACCESS_TOKEN` (secret) | Active l'enrichissement Genius des classiques et sons du siècle |
 
+### Ce que fait le bot chaque vendredi
+
+- **Sorties** des artistes de `artists.json`, **featurings compris** (morceaux d'autres artistes où ils sont invités).
+- **Suivi automatique** : tous les artistes de `artists.json` sont suivis sur ton compte Spotify.
+- **Classiques hip-hop et sons du siècle** : 3 + 3 par semaine, **sans répétition** jusqu'à avoir fait le tour de la liste (rotation déterministe, sans fichier d'état).
+- **Best of mensuel** : le 1er vendredi du mois, playlist `BEST OF - <mois>` des sorties du mois précédent classées par popularité, top 10 dans le mail (`--best-of` pour le forcer).
+- **Mail** avec pochettes, badges (Single / Album / Deluxe / Feat), liens vers chaque sortie et épisode, compatible mobile.
+
 ### Filtrage
 
 - Les **rééditions** (remaster, anniversary, expanded…) sont ignorées.
+- Les **vieux titres republiés** sont ignorés : l'ISRC donne l'année d'enregistrement (ex. un titre de 2002 ressorti en single).
 - Les **éditions deluxe** sont signalées dans le mail mais pas ajoutées à la playlist.
-- Un morceau en collab entre deux artistes suivis n'apparaît qu'une fois.
+- Les versions **Radio Edit / Sped Up / Remastered** sont regroupées avec l'original ; une collab entre deux artistes suivis n'apparaît qu'une fois.
 
 ### Renouveler le token Spotify
 
