@@ -19,7 +19,6 @@ import re
 import smtplib
 import sys
 import traceback
-import unicodedata
 from datetime import date, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -50,6 +49,14 @@ def load_json(name, default=None):
         return default if default is not None else []
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+# "Titre - Radio Edit", "Titre (Sped Up)"... -> même morceau que "Titre"
+VERSION_RE = re.compile(r"\s*(-\s*|\()\s*(radio edit|edit|clean|explicit|sped up|slowed|instrumental|remaster(ed)?[^)]*)\)?\s*$", re.I)
+
+
+def base_title(name):
+    return VERSION_RE.sub("", name).strip().lower()
 
 
 def parse_release_date(value):
@@ -114,12 +121,12 @@ def fetch_artist_releases(sp, artists, since):
                 continue
 
             for track in sp.album_tracks(album["id"])["items"]:
-                key = (track["name"].lower(), tuple(sorted(a["id"] for a in track["artists"])))
+                key = (base_title(track["name"]), tuple(sorted(a["id"] for a in track["artists"])))
                 if key in seen_tracks:
                     continue
                 seen_tracks.add(key)
                 uris.append(track["uri"])
-                featured = [a["name"] for a in track["artists"] if a["name"] != name]
+                featured = [a["name"] for a in track["artists"] if a["id"] != artist["id"]]
                 feat = f" ft. {', '.join(featured)}" if featured else ""
                 lines.append(f"{name}{feat} - {track['name']}")
 
@@ -145,19 +152,6 @@ def fetch_podcast_episodes(sp, podcasts, since):
             latest = max(recent, key=lambda ep: ep["release_date"])
             episodes.append((name, latest["name"]))
     return episodes, errors
-
-
-def fetch_recommendations(sp, track_uris):
-    """API dépréciée par Spotify pour les apps récentes : best effort, silencieux si 404."""
-    if not track_uris:
-        return []
-    try:
-        seeds = [uri.split(":")[-1] for uri in track_uris[:5]]
-        tracks = sp.recommendations(seed_tracks=seeds, limit=3)["tracks"]
-        return [f"{', '.join(a['name'] for a in t['artists'])} - {t['name']}" for t in tracks]
-    except Exception as e:
-        print(f"ℹ️ Recommandations indisponibles : {e}")
-        return []
 
 
 def pick_classics(sp, genius, classics, n=3):
@@ -220,64 +214,67 @@ def connect_genius():
         print("⚠️ GENIUS_ACCESS_TOKEN non défini - fonctionnalités Genius désactivées")
         return None
     from lyricsgenius import Genius
-    return Genius(token, verbose=False, remove_section_headers=True, timeout=15)
+    return Genius(token, remove_section_headers=True, timeout=15)
 
 
-def genius_url_slug(text):
-    """'The Blueprint' -> 'The-blueprint' (format des URLs d'albums Genius)."""
-    text = unicodedata.normalize("NFKD", text)
-    text = "".join(c for c in text if not unicodedata.combining(c))
-    text = re.sub(r"[^\w\s-]", "", text)
-    text = re.sub(r"\s+", "-", text.strip())
-    return (text[0].upper() + text[1:].lower()) if text else text
+def first_hit(response):
+    """Premier résultat d'une recherche Genius (format 'sections' ou 'hits')."""
+    hits = response.get("sections", [{}])[0].get("hits") if "sections" in response else response.get("hits")
+    return hits[0]["result"] if hits else None
 
 
-def first_annotation(song, max_len):
-    try:
-        desc = song.description_annotation["annotations"][0]["body"]["plain"]
-    except (AttributeError, KeyError, IndexError, TypeError):
-        return []
-    if not desc or len(desc) <= 50:
-        return []
-    return [desc[:max_len] + "..." if len(desc) > max_len else desc]
+def plain(field, max_len=None):
+    """Texte brut d'un champ description Genius ({'plain': ...}) ; '' si vide ('?')."""
+    text = (field or {}).get("plain", "") if isinstance(field, dict) else str(field or "")
+    text = text.strip()
+    if text in ("", "?"):
+        return ""
+    if max_len and len(text) > max_len:
+        return text[:max_len].rsplit(" ", 1)[0] + "..."
+    return text
+
+
+def genius_artist_bio(genius, artist_id):
+    artist = genius.artist(artist_id, text_format="plain")
+    return plain(artist.get("artist", artist).get("description"), 250).split("\n")[0]
 
 
 def get_album_genius_info(genius, album_name, artist_name):
     if not genius:
         return None
-    info = {
-        "url": f"https://genius.com/albums/{genius_url_slug(artist_name)}/{genius_url_slug(album_name)}",
-        "description": "",
-        "release_date": "",
-        "facts": [],
-    }
     try:
-        song = genius.search_song(album_name, artist_name) or genius.search_song(artist_name, artist_name)
-        if song:
-            info["facts"] = first_annotation(song, 300)
+        hit = first_hit(genius.search_albums(f"{album_name} {artist_name}"))
+        if not hit:
+            return None
+        album = genius.album(hit["id"], text_format="plain")
+        album = album.get("album", album)
+        annotation = (album.get("description_annotation") or {}).get("annotations") or [{}]
+        fact = plain(annotation[0].get("body"), 300)
+        return {
+            "url": album.get("url") or hit.get("url"),
+            "release_date": album.get("release_date_for_display") or "",
+            "facts": [fact] if fact else [],
+            "description": genius_artist_bio(genius, album["artist"]["id"]) if album.get("artist") else "",
+        }
     except Exception as e:
-        print(f"  ⚠️ Genius (chanson) pour {album_name}: {e}")
-    try:
-        artist = genius.search_artist(artist_name, max_songs=0, get_full_info=True)
-        if artist and artist.description:
-            desc = artist.description.get("plain", "") if isinstance(artist.description, dict) else str(artist.description)
-            info["description"] = desc.split("\n")[0]
-    except Exception as e:
-        print(f"  ⚠️ Genius (artiste) pour {artist_name}: {e}")
-    return info
+        print(f"  ⚠️ Genius pour {album_name} - {artist_name}: {e}")
+        return None
 
 
 def get_song_genius_info(genius, song_name, artist_name):
     if not genius:
         return None
     try:
-        song = genius.search_song(song_name, artist_name)
+        hit = first_hit(genius.search_songs(f"{song_name} {artist_name}"))
+        if not hit:
+            return None
+        song = genius.song(hit["id"], text_format="plain")
+        song = song.get("song", song)
+        fact = plain(song.get("description"), 200)
+        return {"url": song.get("url"), "release_date": song.get("release_date_for_display") or "", "facts": [fact] if fact else []}
     except Exception as e:
         print(f"  ⚠️ Genius pour {song_name} - {artist_name}: {e}")
         return None
-    if not song:
-        return None
-    return {"url": song.url, "release_date": getattr(song, "release_date", ""), "facts": first_annotation(song, 200)}
 
 
 # -------------------------------------------------------------------- Mail
@@ -299,6 +296,8 @@ def html_card(head, url, genius_info, about=False):
     if about and g.get("description"):
         out += (f'<p style="margin-top:10px; font-size:0.9em; color:#555;"><strong>À propos de l\'artiste :</strong>'
                 f'<br>{escape(g["description"][:250])}...</p>')
+    if g.get("release_date"):
+        out += f'<p style="margin-top:5px; font-size:0.85em; color:#777;">📅 Sorti le : {escape(g["release_date"])}</p>'
     if g.get("facts"):
         out += (f'<p style="margin-top:10px; padding:10px; background-color:#fff; border-left:3px solid {GOLD}; '
                 f'font-size:0.9em; color:#333;"><strong>💡 Le saviez-vous ?</strong><br>{escape(g["facts"][0])}</p>')
@@ -308,7 +307,7 @@ def html_card(head, url, genius_info, about=False):
     return out + "</div>"
 
 
-def build_email(today, releases, playlist_url, podcasts, recommendations, classics, songs, errors):
+def build_email(today, releases, playlist_url, podcasts, classics, songs, errors):
     week = today.isocalendar()[1]
     text = ["🎶 Voici les sorties Spotify de cette semaine :", ""]
     html = ["<html><body><h3>🍝 Au menu cette semaine</h3>"]
@@ -328,11 +327,6 @@ def build_email(today, releases, playlist_url, podcasts, recommendations, classi
     if podcasts:
         text += ["", "-- Podcasts --", *(f"{s} - {e}" for s, e in podcasts)]
         html.append(html_list("🎧 Podcasts", [f"<strong>{escape(s)}</strong> - {escape(e)}" for s, e in podcasts]))
-
-    if recommendations:
-        text += ["", "-- Découvertes --", *recommendations]
-        html.append(html_list("🔍 Découvertes", [escape(r) for r in recommendations],
-                              "3 morceaux que tu pourrais aimer basés sur tes nouvelles sorties :"))
 
     if classics:
         text += ["", "-- Les Classiques Hip-Hop de la semaine --"]
@@ -406,7 +400,6 @@ def run(dry_run=False):
     releases, release_uris, errors = fetch_artist_releases(sp, load_json("artists.json"), since)
     podcasts, podcast_errors = fetch_podcast_episodes(sp, load_json("podcasts.json"), since)
     errors += podcast_errors
-    recommendations = fetch_recommendations(sp, release_uris)
     classics = pick_classics(sp, genius, load_json("classics_hiphop.json"))
     songs = pick_songs(sp, genius, load_json("best_songs_21st_century.json"))
 
@@ -421,7 +414,7 @@ def run(dry_run=False):
         print("ℹ️ Pas de nouvelles sorties cette semaine.")
 
     subject, text_body, html_body = build_email(
-        today, releases, playlist_url, podcasts, recommendations, classics, songs, errors)
+        today, releases, playlist_url, podcasts, classics, songs, errors)
 
     if dry_run:
         os.makedirs(os.path.join(BASE_DIR, "out"), exist_ok=True)
