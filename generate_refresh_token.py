@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from spotipy.cache_handler import MemoryCacheHandler
 from spotipy.oauth2 import SpotifyOAuth
 
-from app import SPOTIFY_SCOPE
+from bot.config import SPOTIFY_SCOPE
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
