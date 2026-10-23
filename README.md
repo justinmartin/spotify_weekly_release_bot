@@ -1,133 +1,71 @@
 # Spotify Weekly Release Bot
 
-**Spotify Weekly Release Bot** est un outil d’automatisation en Python qui détecte toutes les **nouvelles sorties (albums, singles, featurings)** d’une liste de vos artistes préférés, les compile dans une playlist et vous envoie un **résumé par e-mail** listant toutes les sorties de la semaine.
+Chaque vendredi matin, le bot repère les **nouvelles sorties** (albums, singles, featurings) des artistes de `artists.json`, les range dans une **playlist Spotify** et envoie un **mail récap** avec pochettes et liens.
 
-Ce projet est conçu pour les amateurs de musique qui veulent écouter chaque semaine les nouveautés de leurs artistes favoris.
+## Ce que fait le bot chaque vendredi
 
----
-
-## Fonctionnalités
-
-| Fonctionnalité | Description |
-|----------------|------------|
-| **Création automatique de playlists Spotify** | Chaque semaine, une nouvelle playlist est créée |
-| **Suivi des artistes via `artists.json`** | Définissez la liste des artistes à suivre en ajoutant leurs IDs Spotify dans le fichier |
-| **Gestion des doublons pour les collaborations** | Si deux artistes de votre liste sortent une collaboration, le morceau n’apparaît qu’une seule fois |
-| **Résumé par e-mail** | Envoie un e-mail chaque vendredi listant toutes les nouvelles sorties (et les erreurs éventuelles) |
-| **Rapport des erreurs** | Si une requête échoue ou si un ID artiste est invalide, cela est inclus dans le rapport envoyé |
-| **Exécution hebdomadaire automatique** | Automatisé via GitHub Actions chaque vendredi matin |
-
----
-
-## Fonctionnement
-
-1. **Chargement des variables d’environnement**  
-   Le bot récupère vos identifiants Spotify (depuis `.env` ou GitHub secrets).
-
-2. **Lecture de votre liste d’artistes** (`artists.json`)  
-   Exemple :
-   ```json
-   [
-    { "artist": "Fred Again..",      "id": "4oLeXFyACqeem2VImYeBFe" },
-    { "artist": "Future",            "id": "1RyvyyTE3xzB2ZywiAwp0i" },
-    { "artist": "Don Toliver",       "id": "4Gso3d4CscCijv0lmajZWs" },
-    { "artist": "Ken Carson",        "id": "3gBZUcNeVumkeeJ19CY2sX" },
-    { "artist": "Drake",             "id": "3TVXtAsR1Inumwj472S9r4" },
-    { "artist": "Playboi Carti",     "id": "699OTQXzgjhIYAHMy9RyPD" },
-    { "artist": "La Fève",           "id": "2sBKOwN0fSjx39VtL2WpjJ" },
-    { "artist": "Tyler, the Creator", "id": "4V8LLVI7PbaPR0K2TGSxFF" },
-    { "artist": "Destroy Lonely",    "id": "1HPW4jeRjXBFRoUnSvBzoD" },
-    { "artist": "Jay-Z",             "id": "3nFkdlSjzX9mRTtwJOzDYB" },
-    { "artist": "Westside Gunn",     "id": "0ABk515kENDyATUdpCKVfW" },
-    { "artist": "Young Thug",        "id": "50co4Is1HCEo8bhOyUWKpn" },
-    { "artist": "A$AP Rocky",        "id": "13ubrt8QOOCPljQ2FL1Kca" },
-    { "artist": "Paul Kalkbrenner",  "id": "0rasA5Z5h1ITtHelCpfu9R" },
-    { "artist": "The Weeknd",        "id": "1Xyo4u8uXC1ZmMpatF05PJ" },
-    { "artist": "Travis Scott",      "id": "0Y5tJX1MQlPlqiwlOH1tJY" }
-   ]
-
-   
-3. **Vérification des nouvelles sorties**  
-Le bot interroge l’API Spotify pour chaque artiste de `artists.json` et récupère ses albums, singles et EPs récents (maximum 50 par artiste). Pour chaque sortie, il vérifie la date de publication et ne conserve que celles publiées au cours des 7 derniers jours.
-
-4. **Filtrage et normalisation des morceaux**  
-Pour chaque sortie retenue, le bot récupère les données et construit une représentation lisible :
-- Pour les singles ou collaborations : `Artiste principal ft. Artiste secondaire - Titre`
-- Pour les albums/EP : `Artiste - Titre [Album/EP]`
-
-Toutes les informations sont stockées avec leurs **URIs Spotify** pour ajoutés à la playlist. Toutes ces URIs collectées sont ajoutées dans un set et dédupliqués pour garantir l’unicité.
-
-7. **Création de la playlist hebdomadaire (HEBDO)**  
-Si de nouvelles pistes sont détectées, le bot crée une playlist nommée `HEBDO - JJ/MM` (date du jour) sur ton compte Spotify et y ajoute toutes les URIs uniques.
-
-8. **Organisation / dossier HEBDO**  
-Spotify ne permet pas la création de vrais dossiers via son API publique. Pour regrouper les playlists, le bot **préfixe** chaque playlist par `HEBDO -`. Sur l’application Spotify (desktop ou mobile), les playlists apparaîtront proches les unes des autres et pourront être rangées dans un dossier manuellement si souhaité.
-
-9. **Rapport & notifications par e-mail**  
-À la fin du processus, un rapport est généré contenant :
-- La liste des nouvelles sorties par artiste
-- Les erreurs éventuelles (ID artiste invalide, API timeout, etc.)
-
-Ce rapport est envoyé automatiquement par e-mail (Outlook / SMTP) avec pour objet : `Sorties de la semaine - WK__`.
-Le corps du mail contient le listing des titres détectés et la section `Èrreurs rencontrées`.
-
----
-
-## 🎵 Configuration de l'API Genius (optionnel)
-
-Pour enrichir les albums classiques avec des infos contextuelles (bio artiste, date de sortie, anecdotes), obtenez un token Genius :
-
-1. Allez sur [genius.com/api-clients](https://genius.com/api-clients)
-2. Créez une application et générez un token d'accès
-3. Ajoutez-le dans votre fichier `.env` :
-   ```bash
-   GENIUS_ACCESS_TOKEN=votre_token_ici
-   ```
-4. Ajoutez-le aussi dans **GitHub Secrets** (`GENIUS_ACCESS_TOKEN`)
-
-<!-- chore: trigger automation run -->
-
-
----
-
-## Utilisation
-
-```bash
-pip install -r requirements.txt
-python app.py --dry-run   # aperçu sans créer de playlist ni envoyer de mail (out/email_<date>.html)
-python app.py             # run complet
-```
-
-Depuis GitHub : **Actions → Spotify Weekly Release Bot → Run workflow** (case « Dry run » disponible).
-
-### Options
-
-| Variable | Effet |
-|---|---|
-| `ROLLING_PLAYLIST=true` (variable de repo GitHub) | Une seule playlist `HEBDO` vidée et remplie chaque semaine, au lieu d'une nouvelle `HEBDO - JJ/MM` |
-| `GENIUS_ACCESS_TOKEN` (secret) | Active l'enrichissement Genius des classiques et sons du siècle |
-
-### Ce que fait le bot chaque vendredi
-
-- **Sorties** des artistes de `artists.json`, **featurings compris** (morceaux d'autres artistes où ils sont invités).
-- **Suivi automatique** : tous les artistes de `artists.json` sont suivis sur ton compte Spotify.
-- **Classiques hip-hop et sons du siècle** : 3 + 3 par semaine, **sans répétition** jusqu'à avoir fait le tour de la liste (rotation déterministe, sans fichier d'état).
-- **Best of mensuel** : le 1er vendredi du mois, playlist `BEST OF - <mois>` des sorties du mois précédent classées par popularité, top 10 dans le mail (`--best-of` pour le forcer).
-- **Mail** avec pochettes, badges (Single / Album / Deluxe / Feat), liens vers chaque sortie et épisode, compatible mobile.
+- **Sorties de la semaine** (7 derniers jours) des artistes suivis, **featurings compris** : les morceaux d'autres artistes où ils sont invités.
+- **Playlist** `HEBDO - JJ/MM`, ou une seule playlist `HEBDO` vidée puis remplie chaque semaine si `ROLLING_PLAYLIST=true`.
+- **Suivi automatique** : tous les artistes de `artists.json` sont suivis sur le compte Spotify.
+- **Classiques hip-hop et sons du siècle** : 3 + 3 par semaine, **sans répétition** jusqu'à avoir fait le tour des listes (rotation déterministe, sans fichier d'état), avec une description Genius.
+- **Podcasts** de `podcasts.json` : les épisodes de la semaine.
+- **Best of mensuel** : le 1er vendredi du mois, playlist `BEST OF - <mois>` des sorties du mois précédent classées par popularité, avec le top 10 dans le mail.
+- **Mail** compatible mobile : pochettes, badges (Single / Album / Deluxe / Feat), liens vers chaque sortie et épisode, erreurs éventuelles en bas.
+- **Alerte par mail** si le run échoue, avec la marche à suivre quand le refresh token Spotify a expiré.
 
 ### Filtrage
 
 - Les **rééditions** (remaster, anniversary, expanded…) sont ignorées.
 - Les **vieux titres republiés** sont ignorés : l'ISRC donne l'année d'enregistrement (ex. un titre de 2002 ressorti en single).
 - Les **éditions deluxe** sont signalées dans le mail mais pas ajoutées à la playlist.
-- Les versions **Radio Edit / Sped Up / Remastered** sont regroupées avec l'original ; une collab entre deux artistes suivis n'apparaît qu'une fois.
+- Les versions **Radio Edit / Sped Up / Remastered** sont regroupées avec l'original, et une collab entre deux artistes suivis n'apparaît qu'une fois.
 
-### Renouveler le token Spotify
+## Utilisation
 
-En cas d'échec, le bot envoie un mail d'alerte. Si le refresh token a expiré :
+```bash
+pip install -r requirements.txt
+python app.py --dry-run   # aperçu sans playlist ni mail : out/email_<date>.html
+python app.py             # run complet
+python app.py --best-of   # force le best of du mois précédent
+```
+
+Depuis GitHub : **Actions → Spotify Weekly Release Bot → Run workflow** (case « Dry run » disponible).
+
+Le workflow (`.github/workflows/spotify-weekly.yml`) tourne le vendredi (`6 6 * * FRI`, en UTC). GitHub lance les tâches planifiées avec du retard, si bien que le mail arrive en pratique en fin de matinée. Un job `keepalive` empêche GitHub de désactiver le workflow après 60 jours sans commit.
+
+## Configuration
+
+| Où | Nom | Rôle |
+|---|---|---|
+| Secret | `SPOTIPY_CLIENT_ID`, `SPOTIPY_CLIENT_SECRET`, `SPOTIPY_REDIRECT_URI` | Application Spotify |
+| Secret | `SPOTIPY_REFRESH_TOKEN` | Accès au compte (voir plus bas pour le renouveler) |
+| Secret | `EMAIL_USER`, `EMAIL_PASSWORD`, `EMAIL_TO` | Envoi Gmail (mot de passe d'application) |
+| Secret | `GENIUS_ACCESS_TOKEN` | Facultatif : descriptions Genius ([genius.com/api-clients](https://genius.com/api-clients)) |
+| Variable | `ROLLING_PLAYLIST` | `true` : une seule playlist `HEBDO` réutilisée |
+
+En local, les mêmes valeurs vont dans `secrets/.env` (gitignoré).
+
+Les listes se modifient directement dans les fichiers JSON : `artists.json` (artistes suivis, avec leur id Spotify), `podcasts.json`, `classics_hiphop.json` et `best_songs_21st_century.json`.
+
+## Renouveler le token Spotify
+
+Si le mail d'alerte annonce un refresh token expiré :
 
 ```bash
 python generate_refresh_token.py
 ```
 
 Connecte-toi dans le navigateur, puis colle le token affiché dans le secret GitHub `SPOTIPY_REFRESH_TOKEN`.
+
+## Organisation du code
+
+```
+app.py              point d'entrée : run() enchaîne les étapes, main() gère les options et l'alerte
+bot/
+├── config.py       chemins, chargement du .env, portée Spotify, filtres de titres
+├── spotify.py      connexion, suivi, sorties et featurings, podcasts, playlists, best of
+├── picks.py        rotation hebdo sans répétition (classiques, sons du siècle)
+├── genius.py       bios et descriptions Genius
+└── mail.py         mail HTML, envoi SMTP, alerte d'échec
+generate_refresh_token.py   renouvellement du token Spotify
+```
